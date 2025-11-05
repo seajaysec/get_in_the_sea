@@ -199,7 +199,7 @@ function Seafarer:step()
               table.insert(self.active_notes, note_num)
             elseif ae == "MxSynths" then
               if params:get("mxsynths_voice_id") == self.id then
-                local amp = math.max(0.05, (velocity or 100) / 127)
+                local amp = math.min(1.0, math.max(0.1, (velocity or 100) / 100))
                 local tempo = clock.get_tempo()
                 local beat_len
                 if event.is_grace then
