@@ -66,12 +66,6 @@ function init()
             elseif new_engine == "MxSynths" then
               mxSynthsInit()
             end
-            -- best-effort: restore params view if user was there
-            pcall(function()
-              if norns and norns.menu and norns.menu.set_mode then
-                norns.menu.set_mode("params")
-              end
-            end)
           end)
         end)
       end
