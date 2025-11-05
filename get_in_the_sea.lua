@@ -1,4 +1,4 @@
--- get in the sea!
+-- scriptname: get_in_the_sea
 -- @tomw
 --
 -- E1 start/stop
@@ -8,13 +8,15 @@ engine.name = "PolyPerc"
 
 local Seafarer = include("lib/seafarer")
 
-audio_engines = {"PolyPerc"}
+audio_engines = { "PolyPerc", "MxSynths" }
 mxsamples_instruments = {}
 m = midi.connect()
+mxsynths = nil
 
 local draw_metro = metro.init()
 
 local seafarers = {}
+local any_playing = false
 
 function init()
   if libInstalled("mx.samples/lib/mx.samples") then
@@ -23,35 +25,35 @@ function init()
     mxsamples_instruments = skeys:list_instruments()
     if #mxsamples_instruments > 0 then
       table.insert(audio_engines, "MxSamples")
-    end    
+    end
   end
-  
+
   -- add polyperc params
   params:add_group("PolyPerc", 6)
-  cs_AMP = controlspec.new(0,1,'lin',0,0.5,'')
-  params:add{type="control",id="amp",controlspec=cs_AMP, action=function(x) engine.amp(x) end}  
-  
-  cs_PW = controlspec.new(0,100,'lin',0,50,'%')
-  params:add{type="control",id="pw",controlspec=cs_PW,
-    action=function(x) engine.pw(x/100) end}
+  cs_AMP = controlspec.new(0, 1, 'lin', 0, 0.5, '')
+  params:add { type = "control", id = "amp", controlspec = cs_AMP, action = function(x) engine.amp(x) end }
 
-  cs_REL = controlspec.new(0.1,3.2,'lin',0,1.2,'s')
-  params:add{type="control",id="release",controlspec=cs_REL,
-    action=function(x) engine.release(x) end}
+  cs_PW = controlspec.new(0, 100, 'lin', 0, 50, '%')
+  params:add { type = "control", id = "pw", controlspec = cs_PW,
+    action = function(x) engine.pw(x / 100) end }
 
-  cs_CUT = controlspec.new(50,5000,'exp',0,800,'hz')
-  params:add{type="control",id="cutoff",controlspec=cs_CUT,
-    action=function(x) engine.cutoff(x) end}
+  cs_REL = controlspec.new(0.1, 3.2, 'lin', 0, 1.2, 's')
+  params:add { type = "control", id = "release", controlspec = cs_REL,
+    action = function(x) engine.release(x) end }
 
-  cs_GAIN = controlspec.new(0,4,'lin',0,1,'')
-  params:add{type="control",id="gain",controlspec=cs_GAIN,
-    action=function(x) engine.gain(x) end}
-  
-  cs_PAN = controlspec.new(-1,1, 'lin',0,0,'')
-  params:add{type="control",id="pan",controlspec=cs_PAN,
-    action=function(x) engine.pan(x) end}
-  
-  params:add{type = "option", id = "audio_engine", name = "audio engine",
+  cs_CUT = controlspec.new(50, 5000, 'exp', 0, 800, 'hz')
+  params:add { type = "control", id = "cutoff", controlspec = cs_CUT,
+    action = function(x) engine.cutoff(x) end }
+
+  cs_GAIN = controlspec.new(0, 4, 'lin', 0, 1, '')
+  params:add { type = "control", id = "gain", controlspec = cs_GAIN,
+    action = function(x) engine.gain(x) end }
+
+  cs_PAN = controlspec.new(-1, 1, 'lin', 0, 0, '')
+  params:add { type = "control", id = "pan", controlspec = cs_PAN,
+    action = function(x) engine.pan(x) end }
+
+  params:add { type = "option", id = "audio_engine", name = "audio engine",
     options = audio_engines,
     action = function(value)
       if audio_engines[value] ~= engine.name then
@@ -59,43 +61,52 @@ function init()
         engine.load(audio_engines[value], function()
           if audio_engines[value] == "MxSamples" then
             mxSamplesInit()
+          elseif audio_engines[value] == "MxSynths" then
+            mxSynthsInit()
           end
         end
         )
       end
     end
   }
-  
-  params:add{type = "number", id = "max_drift", name = "max phrase drift", min = 1, max = 10, default = 3}
-  params:add{type = "number", id = "repeat_probability", name = "repeat probability", min = 0, max = 10, default = 5}
-  
+
+  params:add { type = "number", id = "max_drift", name = "max phrase drift", min = 1, max = 10, default = 3 }
+  params:add { type = "number", id = "repeat_probability", name = "repeat probability", min = 0, max = 10, default = 5 }
+  params:add { type = "control", id = "grace_len_beats", name = "grace length (beats)", controlspec = controlspec.new(0.0625, 0.5, 'lin', 0, 0.0625, 'beats') }
+  params:add { type = "number", id = "mxsynths_voice_id", name = "mx.synths voice id (0=off)", min = 0, max = 8, default = 1 }
+
   -- add seafarers and their params
   table.insert(seafarers, Seafarer:new(1))
   table.insert(seafarers, Seafarer:new(2))
   table.insert(seafarers, Seafarer:new(3))
   table.insert(seafarers, Seafarer:new(4))
-  
+
   table.insert(seafarers, Seafarer:new(5))
   table.insert(seafarers, Seafarer:new(6))
   table.insert(seafarers, Seafarer:new(7))
   table.insert(seafarers, Seafarer:new(8))
-  
+
   params:default()
 
   screen.aa(1)
 
   draw_metro.event = update
-  draw_metro:start(1/10)
+  draw_metro:start(1 / 10)
 end
 
 function mxSamplesInit()
   skeys:reset()
 end
 
+function mxSynthsInit()
+  local mxsynths_ = include("mx.synths/lib/mx.synths")
+  mxsynths = mxsynths_:new()
+end
+
 function libInstalled(file)
-  local dirs = {norns.state.path, _path.code, _path.extn}
+  local dirs = { norns.state.path, _path.code, _path.extn }
   for _, dir in ipairs(dirs) do
-    local p = dir..file..'.lua'
+    local p = dir .. file .. '.lua'
     if util.file_exists(p) then
       return true
     end
@@ -112,7 +123,7 @@ m.event = function(data)
       elseif d.type == "stop" then
         seafarers[s]:all_notes_off()
       end
-      
+
       seafarers[s].playing = d.type == "start" or d.type == "continue"
     end
   end
@@ -136,7 +147,7 @@ end
 
 function update()
   local all_end = true
-  local any_playing = false
+  any_playing = false
   local min_phrase = 999
   for s = 1, #seafarers do
     -- check if all players have reached the end (probably shouldn't be here)
@@ -152,13 +163,13 @@ function update()
       min_phrase = seafarers[s].phrase
     end
   end
-  
+
   -- let all seafarers know what the others are up to
   for s = 1, #seafarers do
     seafarers[s].all_at_end = all_end
     seafarers[s].max_phrase = min_phrase + params:get("max_drift")
   end
-  
+
   redraw()
 end
 
@@ -167,10 +178,10 @@ function redraw()
   screen.font_face(12)
   screen.font_size(12)
   screen.level(15)
-  
+
   screen.move(0, 10)
   screen.text("Get in the sea!")
-  
+
   screen.font_size(10)
 
   local x = 0
@@ -178,7 +189,7 @@ function redraw()
   for s = 1, #seafarers do
     screen.move(x, y)
     screen.text(string.format("%02d", seafarers[s].phrase))
-    
+
     x = x + 30
     if s == 4 then
       y = 44
