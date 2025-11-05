@@ -7,12 +7,14 @@
 engine.name = "PolyPerc"
 
 local Seafarer = include("lib/seafarer")
+local tab = require "tabutil"
 
 audio_engines = { "PolyPerc", "MxSynths" }
 mxsamples_instruments = {}
 m = midi.connect()
 mxsynths = nil
 mxsynths_initialized = false
+local engine_choices = {"PolyPerc", "MxSynths"}
 
 local draw_metro = metro.init()
 
@@ -59,23 +61,45 @@ function init()
   params:add { type = "control", id = "pan", controlspec = cs_PAN,
     action = function(x) engine.pan(x) end }
 
-  params:add { type = "option", id = "audio_engine", name = "audio engine",
-    options = audio_engines,
-    action = function(value)
-      local new_engine = audio_engines[value]
-      if new_engine ~= engine.name then
-        clock.run(function()
-          engine.load(new_engine, function()
-            if new_engine == "MxSamples" then
-              mxSamplesInit()
-            elseif new_engine == "MxSynths" then
-              mxSynthsInit()
-            end
-          end)
-        end)
-      end
+  -- Build engine choices (Orca-like UX)
+  local function engine_available(name)
+    if engine.names == nil or #engine.names == 0 then return true end
+    return tab.contains(engine.names, name)
+  end
+
+  -- include FM7, Passersby, Timber, Odashodasho if installed
+  for _, name in ipairs({"FM7", "Passersby", "Timber", "Odashodasho"}) do
+    if engine_available(name) and not tab.contains(engine_choices, name) then
+      table.insert(engine_choices, name)
     end
-  }
+  end
+  -- include MxSamples if instruments are available
+  if #mxsamples_instruments > 0 and not tab.contains(engine_choices, "MxSamples") then
+    table.insert(engine_choices, "MxSamples")
+  end
+
+  params:add_group("ENGINE", #engine_choices + 1)
+  params:add_number("engine_index", "engine index", 1, #engine_choices, 1)
+  params:hide("engine_index")
+  params:set_action("engine_index", function(idx)
+    local name = engine_choices[idx]
+    if name == nil or name == engine.name then return end
+    clock.run(function()
+      engine.load(name, function()
+        if name == "MxSamples" then
+          mxSamplesInit()
+        elseif name == "MxSynths" then
+          mxSynthsInit()
+        end
+      end)
+    end)
+  end)
+  for i, name in ipairs(engine_choices) do
+    params:add_trigger("engine_activate_" .. name, "Activate " .. name .. " engine")
+    params:set_action("engine_activate_" .. name, function()
+      params:set("engine_index", i)
+    end)
+  end
 
   params:add { type = "number", id = "max_drift", name = "max phrase drift", min = 1, max = 10, default = 3 }
   params:add { type = "number", id = "repeat_probability", name = "repeat probability", min = 0, max = 10, default = 5 }

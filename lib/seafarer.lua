@@ -193,7 +193,7 @@ function Seafarer:step()
 
           if self.output == 1 or self.output == 3 then
             -- audio engine
-            local ae = audio_engines[params:get("audio_engine")]
+            local ae = engine.name
             if ae == "MxSamples" then
               skeys:on({ name = self.mx_instrument, midi = note_num, velocity = velocity })
               table.insert(self.active_notes, note_num)
