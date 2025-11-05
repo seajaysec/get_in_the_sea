@@ -172,6 +172,17 @@ function Seafarer:all_notes_off()
   self.active_notes = {}
 end
 
+function Seafarer:set_output(value)
+  self:all_notes_off()
+  if value == 4 then
+    crow.output[2].action = "{to(5,0),to(0,0.25)}"
+  elseif value == 5 then
+    crow.ii.pullup(true)
+    crow.ii.jf.mode(1)
+  end
+  self.output = value
+end
+
 function Seafarer:step()
   clock.sync(1)
   local waitCount = 0

@@ -18,6 +18,8 @@ local draw_metro = metro.init()
 
 local seafarers = {}
 local any_playing = false
+local selected_seafarer = 1
+local k1_held = false
 
 function init()
   if libInstalled("mx.samples/lib/mx.samples") then
@@ -59,23 +61,44 @@ function init()
   params:add { type = "control", id = "pan", controlspec = cs_PAN,
     action = function(x) engine.pan(x) end }
 
-  params:add { type = "option", id = "audio_engine", name = "audio engine",
-    options = audio_engines,
-    action = function(value)
-      local new_engine = audio_engines[value]
-      if new_engine ~= engine.name then
-        clock.run(function()
-          engine.load(new_engine, function()
-            if new_engine == "MxSamples" then
-              mxSamplesInit()
-            elseif new_engine == "MxSynths" then
-              mxSynthsInit()
-            end
-          end)
+  -- orca-like engine UX: hidden index + triggers
+  params:add_group("ENGINE", 1)
+  params:add_number("engine_index", "engine index", 1, 3, 1)
+  params:hide("engine_index")
+  local function load_engine_by_index(idx)
+    local name = audio_engines[idx]
+    if name == nil then return end
+    if name ~= engine.name then
+      clock.run(function()
+        engine.load(name, function()
+          if name == "MxSamples" then
+            mxSamplesInit()
+          elseif name == "MxSynths" then
+            mxSynthsInit()
+          end
         end)
-      end
+      end)
     end
-  }
+  end
+  params:set_action("engine_index", function(val)
+    load_engine_by_index(val)
+  end)
+  params:add_trigger("engine_polyperc", "Activate PolyPerc")
+  params:set_action("engine_polyperc", function()
+    params:set("engine_index", 1)
+  end)
+  params:add_trigger("engine_mxsynths", "Activate MxSynths")
+  params:set_action("engine_mxsynths", function()
+    params:set("engine_index", 2)
+  end)
+  if tab.contains(audio_engines, "MxSamples") then
+    params:add_trigger("engine_mxsamples", "Activate MxSamples")
+    params:set_action("engine_mxsamples", function()
+      -- PolyPerc, MxSynths, MxSamples → index is 3 for MxSamples when present
+      local idx = 3
+      params:set("engine_index", idx)
+    end)
+  end
 
   params:add { type = "number", id = "max_drift", name = "max phrase drift", min = 1, max = 10, default = 3 }
   params:add { type = "number", id = "repeat_probability", name = "repeat probability", min = 0, max = 10, default = 5 }
@@ -139,9 +162,31 @@ m.event = function(data)
 end
 
 function enc(n, d)
+  if n == 1 then
+    -- change engine
+    local idx = util.clamp(params:get("engine_index") + (d > 0 and 1 or -1), 1, #audio_engines)
+    params:set("engine_index", idx)
+  elseif n == 2 then
+    -- select seafarer
+    selected_seafarer = util.clamp(selected_seafarer + (d > 0 and 1 or -1), 1, #seafarers)
+  elseif n == 3 then
+    local s = seafarers[selected_seafarer]
+    if s ~= nil then
+      if k1_held then
+        s.octave = util.clamp((s.octave or 0) + (d > 0 and 1 or -1), -3, 3)
+      else
+        local outputs = options.OUTPUT
+        local next_out = s.output + (d > 0 and 1 or -1)
+        if next_out < 1 then next_out = #outputs end
+        if next_out > #outputs then next_out = 1 end
+        if s.set_output ~= nil then s:set_output(next_out) else s.output = next_out end
+      end
+    end
+  end
 end
 
 function key(n, z)
+  if n == 1 then k1_held = (z == 1) return end
   if z == 1 then
     for s = 1, #seafarers do
       if n == 2 then
@@ -197,7 +242,8 @@ function redraw()
   local y = 24
   for s = 1, #seafarers do
     screen.move(x, y)
-    screen.text(string.format("%02d", seafarers[s].phrase))
+    local marker = (s == selected_seafarer) and ">" or " "
+    screen.text(marker .. string.format("%02d", seafarers[s].phrase))
 
     x = x + 30
     if s == 4 then
@@ -208,11 +254,9 @@ function redraw()
 
   screen.font_size(8)
   screen.move(0, 60)
-  if any_playing then
-    screen.text("Stop   Reset")
-  else
-    screen.text("Start  Reset")
-  end
+  local eng = engine.name or audio_engines[params:get("engine_index")] or "?"
+  local ui = (any_playing and "Stop" or "Start") .. "  Reset   E1:Engine  E2:Sel  E3:" .. (k1_held and "Oct" or "Out")
+  screen.text(string.sub(eng, 1, 9) .. " | " .. ui)
 
   screen.update()
 end
