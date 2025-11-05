@@ -29,6 +29,11 @@ function init()
     end
   end
 
+  -- Pre-initialize mx.synths params (avoid adding param groups during engine switch)
+  if libInstalled("mx.synths/lib/mx.synths") then
+    mxSynthsInit()
+  end
+
   -- add polyperc params
   params:add_group("PolyPerc", 6)
   cs_AMP = controlspec.new(0, 1, 'lin', 0, 0.5, '')
