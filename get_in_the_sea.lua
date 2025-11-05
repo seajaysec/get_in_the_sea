@@ -12,6 +12,7 @@ audio_engines = { "PolyPerc", "MxSynths" }
 mxsamples_instruments = {}
 m = midi.connect()
 mxsynths = nil
+mxsynths_initialized = false
 
 local draw_metro = metro.init()
 
@@ -56,16 +57,23 @@ function init()
   params:add { type = "option", id = "audio_engine", name = "audio engine",
     options = audio_engines,
     action = function(value)
-      if audio_engines[value] ~= engine.name then
-        -- change engine and resume play when done
-        engine.load(audio_engines[value], function()
-          if audio_engines[value] == "MxSamples" then
-            mxSamplesInit()
-          elseif audio_engines[value] == "MxSynths" then
-            mxSynthsInit()
-          end
-        end
-        )
+      local new_engine = audio_engines[value]
+      if new_engine ~= engine.name then
+        clock.run(function()
+          engine.load(new_engine, function()
+            if new_engine == "MxSamples" then
+              mxSamplesInit()
+            elseif new_engine == "MxSynths" then
+              mxSynthsInit()
+            end
+            -- best-effort: restore params view if user was there
+            pcall(function()
+              if norns and norns.menu and norns.menu.set_mode then
+                norns.menu.set_mode("params")
+              end
+            end)
+          end)
+        end)
       end
     end
   }
@@ -99,8 +107,10 @@ function mxSamplesInit()
 end
 
 function mxSynthsInit()
+  if mxsynths_initialized then return end
   local mxsynths_ = include("mx.synths/lib/mx.synths")
   mxsynths = mxsynths_:new()
+  mxsynths_initialized = true
 end
 
 function libInstalled(file)
