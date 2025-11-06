@@ -35,7 +35,9 @@ function init()
   end
 
   params:add_separator("ENGINE")
-  params:add_number("engine_index", "engine index", 1, #available_engines, 1)
+  local default_engine_index = 1
+  for i, n in ipairs(available_engines) do if n == engine.name then default_engine_index = i break end end
+  params:add_number("engine_index", "engine index", 1, #available_engines, default_engine_index)
   params:hide("engine_index")
   params:set_action("engine_index", function(idx)
     local name = available_engines[idx]
