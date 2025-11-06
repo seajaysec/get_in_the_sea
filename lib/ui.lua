@@ -39,18 +39,31 @@ function UI.draw(seafarers, any_playing, ensemble, ui_focus, header_index, ui_sh
     end
     local spread = math.max(0, max_p - min_p)
 
+    local elapsed = 0
+    if ensemble.get_elapsed_seconds ~= nil then elapsed = ensemble:get_elapsed_seconds() end
+    local h = math.floor(elapsed / 3600)
+    local m = math.floor((elapsed % 3600) / 60)
+    local ssec = elapsed % 60
+    local time_str = string.format("%02d:%02d:%02d", h, m, ssec)
+    local total = math.max(1, #phrases)
+    local pct = math.floor((median / total) * 100)
+
     screen.move(0, 20)
     screen.level(12)
-    screen.text(string.format("Median %d  Spread %d", median, spread))
+    screen.text(string.format("Time %s  Complete %d%%", time_str, pct))
 
     screen.move(0, 30)
-    screen.text(string.format("Active %d  Resting %d  Ready %d", active, resting, ready))
+    screen.text(string.format("Median %d  Spread %d", median, spread))
 
     screen.move(0, 40)
+    screen.text(string.format("Active %d  Resting %d  Ready %d", active, resting, ready))
+
+    screen.move(0, 50)
+    screen.level(10)
     screen.text(string.format("At53 %d  Ending %s", at53, ensemble.ending and "on" or "off"))
 
-    screen.move(0, 52)
-    screen.level(10)
+    -- final row: positions
+    screen.move(0, 60)
     local pos = {}
     for i = 1, #seafarers do pos[i] = string.format("%02d", seafarers[i].phrase or 1) end
     screen.text("Pos: " .. table.concat(pos, " "))
