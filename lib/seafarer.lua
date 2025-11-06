@@ -382,34 +382,45 @@ function Seafarer:step()
               self.ready_indicator = false
             end
           else
-            -- autonomous / manual default advancement
-            if self.repetitions_remaining <= 0 and self.phrase < #phrases then
-              -- rest behavior at transitions
-              local active_players = 0
-              if self.ensembleRef ~= nil then
-                for _, s in ipairs(self.ensembleRef.players) do if s.playing and not s.is_resting then active_players =
-                    active_players + 1 end end
+            -- autonomous advancement; manual holds
+            local mode = (self.ensembleRef and self.ensembleRef:get_mode()) or "autonomous"
+            if mode == "manual" then
+              -- do not auto-advance; optional catch-up if too far behind
+              if self.ensembleRef and self.ensembleRef.auto_catchup_enabled then
+                local med = self.ensembleRef.median_pattern or 1
+                if math.abs(self.phrase - med) > 3 then
+                  self.phrase = math.max(1, med - 1)
+                  self.phrase_note = 1
+                end
               end
-              local min_active = (self.ensembleRef and self.ensembleRef.min_active_players) or 3
-              local rest_pct = (self.ensembleRef and self.ensembleRef.rest_probability_pct) or 15
-              local should_rest = (math.random(100) <= rest_pct) and (active_players > min_active)
+            else
+              if self.repetitions_remaining <= 0 and self.phrase < #phrases then
+                -- rest behavior at transitions
+                local active_players = 0
+                if self.ensembleRef ~= nil then
+                  for _, s in ipairs(self.ensembleRef.players) do if s.playing and not s.is_resting then active_players = active_players + 1 end end
+                end
+                local min_active = (self.ensembleRef and self.ensembleRef.min_active_players) or 3
+                local rest_pct = (self.ensembleRef and self.ensembleRef.rest_probability_pct) or 15
+                local should_rest = (math.random(100) <= rest_pct) and (active_players > min_active)
 
-              if should_rest then
-                self.is_resting = true
-                self.rest_patterns_remaining = math.random(1, 3)
-              end
+                if should_rest then
+                  self.is_resting = true
+                  self.rest_patterns_remaining = math.random(1, 3)
+                end
 
-              -- advance one pattern respecting allowed max
-              if self.phrase + 1 <= (self.allowed_max_phrase or #phrases) then
-                self.phrase = self.phrase + 1
-              end
+                -- advance one pattern respecting allowed max
+                if self.phrase + 1 <= (self.allowed_max_phrase or #phrases) then
+                  self.phrase = self.phrase + 1
+                end
 
-              -- pattern 53 handling
-              if self.phrase >= #phrases then
-                self.phrase = #phrases
-                if self.all_at_end then
-                  self.playing = false
-                  self:all_notes_off()
+                -- pattern 53 handling
+                if self.phrase >= #phrases then
+                  self.phrase = #phrases
+                  if self.all_at_end then
+                    self.playing = false
+                    self:all_notes_off()
+                  end
                 end
               end
             end
