@@ -16,7 +16,10 @@ function Ensemble:new(seafarers)
     pulse_volume = 0.8,
     median_pattern = 1,
     convergence_mode = false,
-    elapsed_seconds = 0,
+    -- Runtime tracking
+    is_running = false,
+    run_start_time = nil,
+    run_elapsed_sec = 0,
     user_pattern_target = 1,
     min_active_players = 3,
     rest_probability_pct = 15,
@@ -121,17 +124,33 @@ end
 
 function Ensemble:start_all()
   for _, s in ipairs(self.players) do s.playing = true end
+  if not self.is_running then
+    self.is_running = true
+    self.run_start_time = util.time()
+  end
   if self.pulse_enabled then self.pulse:start(self) end
 end
 
 function Ensemble:stop_all()
   for _, s in ipairs(self.players) do s.playing = false; s:all_notes_off() end
+  if self.is_running and self.run_start_time ~= nil then
+    self.run_elapsed_sec = self.run_elapsed_sec + (util.time() - self.run_start_time)
+    self.is_running = false
+    self.run_start_time = nil
+  end
   if self.pulse_enabled then self.pulse:stop() end
 end
 
 function Ensemble:reset_all()
   for _, s in ipairs(self.players) do s:reset() end
   self.user_pattern_target = 1
+  -- reset timer; if currently running, restart count from now
+  self.run_elapsed_sec = 0
+  if self.is_running then
+    self.run_start_time = util.time()
+  else
+    self.run_start_time = nil
+  end
 end
 
 function Ensemble:advance_all_target()
@@ -156,6 +175,15 @@ function Ensemble:update_median()
     s.allowed_min_phrase = math.max(1, self.median_pattern - 2)
     s.allowed_max_phrase = math.min(#phrases, self.median_pattern + 3)
   end
+end
+
+function Ensemble:get_elapsed_seconds()
+  local acc = self.run_elapsed_sec or 0
+  if self.is_running and self.run_start_time ~= nil then
+    acc = acc + (util.time() - self.run_start_time)
+  end
+  if acc < 0 then acc = 0 end
+  return math.floor(acc)
 end
 
 function Ensemble:maybe_start_ending(all_at_53)
