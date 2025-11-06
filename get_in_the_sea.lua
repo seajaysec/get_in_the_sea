@@ -51,6 +51,7 @@ function init()
   -- Ensemble params and state
   ensemble = Ensemble:new(seafarers)
   ensemble:setup_params()
+  for _, s in ipairs(seafarers) do s:set_ensemble(ensemble) end
 
   -- ORCA-style sections (no menu diving)
   -- OUTPUT
