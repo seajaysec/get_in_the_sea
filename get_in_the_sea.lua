@@ -4,17 +4,13 @@
 -- E1 start/stop
 -- E2 reset
 
-engine.name = "PolyPerc"
+engine.name = "MxSamples"
 
 local Seafarer = include("lib/seafarer")
 local tab = require "tabutil"
 
-audio_engines = { "PolyPerc", "MxSynths" }
 mxsamples_instruments = {}
 m = midi.connect()
-mxsynths = nil
-mxsynths_initialized = false
-local engine_choices = {"PolyPerc", "MxSynths"}
 
 local draw_metro = metro.init()
 
@@ -26,87 +22,16 @@ function init()
     mxsamples = include("mx.samples/lib/mx.samples")
     skeys = mxsamples:new()
     mxsamples_instruments = skeys:list_instruments()
-    if #mxsamples_instruments > 0 then
-      table.insert(audio_engines, "MxSamples")
-    end
+    mxSamplesInit()
   end
 
-  -- Pre-initialize mx.synths params (avoid adding param groups during engine switch)
-  if libInstalled("mx.synths/lib/mx.synths") then
-    mxSynthsInit()
-  end
-
-  -- add polyperc params
-  params:add_group("PolyPerc", 6)
-  cs_AMP = controlspec.new(0, 1, 'lin', 0, 0.5, '')
-  params:add { type = "control", id = "amp", controlspec = cs_AMP, action = function(x) engine.amp(x) end }
-
-  cs_PW = controlspec.new(0, 100, 'lin', 0, 50, '%')
-  params:add { type = "control", id = "pw", controlspec = cs_PW,
-    action = function(x) engine.pw(x / 100) end }
-
-  cs_REL = controlspec.new(0.1, 3.2, 'lin', 0, 1.2, 's')
-  params:add { type = "control", id = "release", controlspec = cs_REL,
-    action = function(x) engine.release(x) end }
-
-  cs_CUT = controlspec.new(50, 5000, 'exp', 0, 800, 'hz')
-  params:add { type = "control", id = "cutoff", controlspec = cs_CUT,
-    action = function(x) engine.cutoff(x) end }
-
-  cs_GAIN = controlspec.new(0, 4, 'lin', 0, 1, '')
-  params:add { type = "control", id = "gain", controlspec = cs_GAIN,
-    action = function(x) engine.gain(x) end }
-
-  cs_PAN = controlspec.new(-1, 1, 'lin', 0, 0, '')
-  params:add { type = "control", id = "pan", controlspec = cs_PAN,
-    action = function(x) engine.pan(x) end }
-
-  -- Build engine choices (Orca-like UX)
-  local function engine_available(name)
-    if engine.names == nil or #engine.names == 0 then return true end
-    return tab.contains(engine.names, name)
-  end
-
-  -- include FM7, Passersby, Timber, Odashodasho if installed
-  for _, name in ipairs({"FM7", "Passersby", "Timber", "Odashodasho"}) do
-    if engine_available(name) and not tab.contains(engine_choices, name) then
-      table.insert(engine_choices, name)
-    end
-  end
-  -- include MxSamples if instruments are available
-  if #mxsamples_instruments > 0 and not tab.contains(engine_choices, "MxSamples") then
-    table.insert(engine_choices, "MxSamples")
-  end
-
-  params:add_group("ENGINE", #engine_choices + 1)
-  params:add_number("engine_index", "engine index", 1, #engine_choices, 1)
-  params:hide("engine_index")
-  params:set_action("engine_index", function(idx)
-    local name = engine_choices[idx]
-    if name == nil or name == engine.name then return end
-    clock.run(function()
-      engine.load(name, function()
-        if name == "MxSamples" then
-          mxSamplesInit()
-        elseif name == "MxSynths" then
-          mxSynthsInit()
-        end
-      end)
-    end)
-  end)
-  for i, name in ipairs(engine_choices) do
-    params:add_trigger("engine_activate_" .. name, "Activate " .. name .. " engine")
-    params:set_action("engine_activate_" .. name, function()
-      params:set("engine_index", i)
-    end)
-  end
-
+  -- GLOBAL settings
+  params:add_group("GLOBAL", 3)
   params:add { type = "number", id = "max_drift", name = "max phrase drift", min = 1, max = 10, default = 3 }
   params:add { type = "number", id = "repeat_probability", name = "repeat probability", min = 0, max = 10, default = 5 }
   params:add { type = "control", id = "grace_len_beats", name = "grace length (beats)", controlspec = controlspec.new(0.0625, 0.5, 'lin', 0, 0.0625, 'beats') }
-  params:add { type = "number", id = "mxsynths_voice_id", name = "mx.synths voice id (0=off)", min = 0, max = 8, default = 1 }
 
-  -- add seafarers and their params
+  -- add seafarers
   table.insert(seafarers, Seafarer:new(1))
   table.insert(seafarers, Seafarer:new(2))
   table.insert(seafarers, Seafarer:new(3))
@@ -116,6 +41,29 @@ function init()
   table.insert(seafarers, Seafarer:new(6))
   table.insert(seafarers, Seafarer:new(7))
   table.insert(seafarers, Seafarer:new(8))
+
+  -- ORCA-style sections
+  -- OUTPUT
+  params:add_group("SEAFARER OUTPUT", #seafarers)
+  for _, s in ipairs(seafarers) do s:add_output_param() end
+
+  -- INSTRUMENT (MxSamples only)
+  if mxsamples ~= nil and #mxsamples_instruments > 0 then
+    params:add_group("SEAFARER INSTRUMENT", #seafarers)
+    for _, s in ipairs(seafarers) do s:add_instrument_param() end
+  end
+
+  -- OCTAVE
+  params:add_group("SEAFARER OCTAVE", #seafarers)
+  for _, s in ipairs(seafarers) do s:add_octave_param() end
+
+  -- MIDI DEVICE
+  params:add_group("SEAFARER MIDI DEVICE", #seafarers)
+  for _, s in ipairs(seafarers) do s:add_midi_device_param() end
+
+  -- MIDI CHANNEL
+  params:add_group("SEAFARER MIDI CHANNEL", #seafarers)
+  for _, s in ipairs(seafarers) do s:add_midi_channel_param() end
 
   params:default()
 
@@ -127,13 +75,6 @@ end
 
 function mxSamplesInit()
   skeys:reset()
-end
-
-function mxSynthsInit()
-  if mxsynths_initialized then return end
-  local mxsynths_ = include("mx.synths/lib/mx.synths")
-  mxsynths = mxsynths_:new()
-  mxsynths_initialized = true
 end
 
 function libInstalled(file)

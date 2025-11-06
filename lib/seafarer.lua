@@ -88,18 +88,13 @@ function Seafarer:new(id)
   }
 
   setmetatable(o, Seafarer)
-  o:init_params()
 
   clock.run(Seafarer.step, o)
 
   return o
 end
 
-function Seafarer:init_params()
-  local param_count = mxsamples == nil and 4 or 5
-
-  params:add_group("seafarer " .. self.id, param_count)
-
+function Seafarer:add_output_param()
   params:add { type = "option", id = self.id .. "_output", name = "output",
     options = options.OUTPUT,
     action = function(value)
@@ -114,7 +109,9 @@ function Seafarer:init_params()
       self.output = value
     end
   }
+end
 
+function Seafarer:add_instrument_param()
   if mxsamples ~= nil then
     params:add { type = "option", id = self.id .. "_mxsamples_instrument", name = "mx inst.", options = mxsamples_instruments,
       action = function(value)
@@ -123,21 +120,27 @@ function Seafarer:init_params()
       end
     }
   end
+end
 
+function Seafarer:add_octave_param()
   params:add { type = "number", id = self.id .. "_octave", name = "octave",
     min = -3, max = 3, default = 0,
     action = function(value)
       self.octave = value
     end
   }
+end
 
+function Seafarer:add_midi_device_param()
   params:add { type = "number", id = self.id .. "midi_out_device", name = "midi out device",
     min = 1, max = 4, default = 1, action = function(value)
-    self:all_notes_off()
-    self.midi_out_device = midi.connect(value)
-  end
+      self:all_notes_off()
+      self.midi_out_device = midi.connect(value)
+    end
   }
+end
 
+function Seafarer:add_midi_channel_param()
   params:add { type = "number", id = self.id .. "_midi_out_channel", name = "midi out channel",
     min = 1, max = 16, default = 1,
     action = function(value)
