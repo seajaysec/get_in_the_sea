@@ -26,13 +26,13 @@
 - K3: Reset (all seafarers)
 - E1: Switch focus (Header ↔ Seafarers)
 - E2: Move selection
-  - Header focus: select Mode / Pulse / Tempo / Median
+  - Header focus: select Mode / Pulse / Tempo / Info
   - Seafarers focus: select seafarer 1–8
 - E3: Adjust selected
   - Mode: change ensemble mode
   - Pulse: toggle on/off
   - Tempo: adjust BPM
-  - Median: read-only
+  - Info: toggles the Info screen (press E3 again to return)
   - Seafarers focus:
     - Semi-autonomous: advance all (Next Pattern)
     - Manual: advance selected seafarer
