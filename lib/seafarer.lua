@@ -181,6 +181,7 @@ end
 function Seafarer:step()
   clock.sync(1)
   local waitCount = 0
+  local BASE_STEP = 0.03125 -- 1/128 note resolution
 
   while true do
     if self.playing then
@@ -293,14 +294,14 @@ function Seafarer:step()
           self.carry_beat_adjustment = 0
         end
 
-        local steps = math.floor((beat_len / 0.25) + 0.0001)
+        local steps = math.floor((beat_len / BASE_STEP) + 0.0001)
         waitCount = math.max(0, steps - 1)
       else
         waitCount = waitCount - 1
       end
     end
 
-    clock.sync(0.25)
+    clock.sync(BASE_STEP)
   end
 end
 
