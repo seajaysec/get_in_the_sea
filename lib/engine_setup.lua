@@ -162,18 +162,16 @@ function EngineSetup.setup(seafarers)
     end)
   end
 
-  -- If MxSamples is installed, prepare instrument list and client
+  -- AUDIO ENGINE SETTINGS
+  params:add_separator("AUDIO ENGINE SETTINGS")
+  add_polyperc_params(switch_engine)
+  -- If MxSamples is installed, prepare instrument list and client (create its group here under AUDIO ENGINE SETTINGS)
   if Utils.lib_installed("mx.samples/lib/mx.samples") then
-    -- External: mx.samples engine; used for sample-based playback
     mxsamples = include("mx.samples/lib/mx.samples")
     skeys = mxsamples:new()
     mxsamples_instruments = skeys:list_instruments()
     mxSamplesInit()
   end
-
-  -- AUDIO ENGINE SETTINGS
-  params:add_separator("AUDIO ENGINE SETTINGS")
-  add_polyperc_params(switch_engine)
   add_mxsamples_params(seafarers, switch_engine)
   local is_fm7_available = false
   for _, n in ipairs(available_engines) do if n == "FM7" then is_fm7_available = true break end end
