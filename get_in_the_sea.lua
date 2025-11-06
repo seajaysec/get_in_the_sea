@@ -27,6 +27,7 @@ local draw_metro = metro.init()
 local seafarers = {}
 local any_playing = false
 local ensemble = nil
+local k1_down = false
 
 function init()
   -- instantiate seafarers
@@ -98,15 +99,31 @@ end
 
 function key(n, z)
   if z == 1 then
-    if n == 2 then
+    if n == 1 then
+      k1_down = true
+    elseif n == 2 then
       if any_playing then
         ensemble:stop_all()
       else
         ensemble:start_all()
       end
     elseif n == 3 then
-      ensemble:reset_all()
+      local mode = ensemble and ensemble:get_mode() or "autonomous"
+      if mode == "semi-autonomous" and not k1_down then
+        ensemble:advance_all_target()
+      elseif mode == "manual" and not k1_down then
+        local sel = params:get("selected_player") or 1
+        local s = seafarers[sel]
+        if s then
+          s.phrase = math.min(#phrases, s.phrase + 1)
+          s.phrase_note = 1
+        end
+      else
+        ensemble:reset_all()
+      end
     end
+  else
+    if n == 1 then k1_down = false end
   end
 end
 
@@ -120,6 +137,8 @@ function update()
 
   if ensemble ~= nil then
     ensemble:update_median()
+    -- Ending protocol trigger
+    if all_end then ensemble:maybe_start_ending(true) end
     for s = 1, #seafarers do
       seafarers[s].all_at_end = all_end
       seafarers[s].allowed_min_phrase = seafarers[s].allowed_min_phrase or 1

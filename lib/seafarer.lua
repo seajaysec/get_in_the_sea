@@ -84,6 +84,20 @@ local AVG_PATTERN_BEATS = (function()
   return s / #phrases
 end)()
 
+local function clamp(x, lo, hi)
+  if x < lo then return lo end
+  if x > hi then return hi end
+  return x
+end
+
+local function gaussian_ms(std_ms)
+  -- Box-Muller transform for mean 0, std deviation std_ms
+  local u1 = math.max(1e-9, math.random())
+  local u2 = math.random()
+  local z0 = math.sqrt(-2 * math.log(u1)) * math.cos(2 * math.pi * u2)
+  return z0 * (std_ms or 0)
+end
+
 function Seafarer:new(id)
   local o = {
     id = id,
@@ -114,6 +128,8 @@ function Seafarer:new(id)
     ready_indicator = false,
     auto_advance_warning = false,
     ensembleRef = nil,
+    velocity_scale = 1.0,
+    human_volume_factor = 1.0,
   }
 
   setmetatable(o, Seafarer)
@@ -300,65 +316,85 @@ function Seafarer:step()
         -- play the event if it's a note
         if event.midi ~= nil then
           local note_num = event.midi + (((self.octave or 0) + (self.displaced_octave or 0)) * 12)
-          local velocity = event.velocity or 100
+          local base_vel = event.velocity or 100
+          -- humanized volume random walk
+          local hvp = (self.ensembleRef and self.ensembleRef.human_volume_pct) or 5
+          local step = (hvp / 100) * 0.5
+          local delta = (math.random() * 2 - 1) * step
+          self.human_volume_factor = clamp((self.human_volume_factor or 1.0) + delta, 1 - (hvp / 100), 1 + (hvp / 100))
+          local velocity = clamp(math.floor(base_vel * self.velocity_scale * self.human_volume_factor), 1, 127)
           local freq = MusicUtil.note_num_to_freq(note_num)
 
-          if self.output == 1 or self.output == 3 then
-            -- audio engine
-            local ae = engine.name
-            if ae == "MxSamples" then
-              skeys:on({ name = self.mx_instrument, midi = note_num, velocity = velocity })
-              table.insert(self.active_notes, note_num)
-            else
-              local ae_lower = string.lower(ae or "")
-              if ae_lower == "polyperc" then
-                engine.hz(freq)
-                table.insert(self.active_notes, note_num)
-              elseif ae_lower == "fm7" then
-                engine.start(note_num, freq)
-                table.insert(self.active_notes, note_num)
-              elseif ae_lower == "passersby" then
-                engine.noteOn(note_num, freq, velocity)
-                table.insert(self.active_notes, note_num)
-              elseif ae_lower == "odashodasho" then
-                local amp = math.min(1.0, math.max(0.1, (velocity or 100) / 127))
-                local pan = params:get("odash_pan") or 0
-                local attack = params:get("odash_attack") or 0.01
-                local decay = params:get("odash_decay") or 0.5
-                local cAtk = params:get("odash_attack_curve") or 4
-                local cRel = params:get("odash_decay_curve") or -4
-                local mRatio = params:get("odash_mod_ratio") or 1
-                local cRatio = params:get("odash_car_ratio") or 1
-                local index = params:get("odash_index") or 1.5
-                local iScale = params:get("odash_index_scale") or 4
-                local fxsend = params:get("odash_reverb_db") or -18
-                local eqFreq = params:get("odash_eq_freq") or 1200
-                local eqDB = params:get("odash_eq_db") or 0
-                local lpf = params:get("odash_lpf") or 20000
-                local noise = util.dbamp(params:get("odash_noise_db") or -96)
-                local natk = params:get("odash_noise_attack") or 0.01
-                local nrel = params:get("odash_noise_decay") or 0.3
-                local voice = "sea" .. tostring(self.id)
-                local record = 0
-                local path = ""
-                engine.fm1(note_num, amp, pan, attack, decay, cAtk, cRel, mRatio, cRatio, index, iScale, fxsend, eqFreq,
-                  eqDB, lpf, noise, natk, nrel, voice, record, path)
+          -- optional human timing offset (only positive delay applied)
+          local std_ms = (self.ensembleRef and self.ensembleRef.human_timing_ms) or 0
+          local offs_ms = math.max(0, gaussian_ms(std_ms))
+          local function trigger_note()
+            if self.output == 1 or self.output == 3 then
+              -- audio engine
+              local ae = engine.name
+              if ae == "MxSamples" then
+                skeys:on({ name = self.mx_instrument, midi = note_num, velocity = velocity })
                 table.insert(self.active_notes, note_num)
               else
-                -- Unknown engine; skip audio trigger to avoid errors
+                local ae_lower = string.lower(ae or "")
+                if ae_lower == "polyperc" then
+                  engine.hz(freq)
+                  table.insert(self.active_notes, note_num)
+                elseif ae_lower == "fm7" then
+                  engine.start(note_num, freq)
+                  table.insert(self.active_notes, note_num)
+                elseif ae_lower == "passersby" then
+                  engine.noteOn(note_num, freq, velocity)
+                  table.insert(self.active_notes, note_num)
+                elseif ae_lower == "odashodasho" then
+                  local amp = math.min(1.0, math.max(0.1, (velocity or 100) / 127))
+                  local pan = params:get("odash_pan") or 0
+                  local attack = params:get("odash_attack") or 0.01
+                  local decay = params:get("odash_decay") or 0.5
+                  local cAtk = params:get("odash_attack_curve") or 4
+                  local cRel = params:get("odash_decay_curve") or -4
+                  local mRatio = params:get("odash_mod_ratio") or 1
+                  local cRatio = params:get("odash_car_ratio") or 1
+                  local index = params:get("odash_index") or 1.5
+                  local iScale = params:get("odash_index_scale") or 4
+                  local fxsend = params:get("odash_reverb_db") or -18
+                  local eqFreq = params:get("odash_eq_freq") or 1200
+                  local eqDB = params:get("odash_eq_db") or 0
+                  local lpf = params:get("odash_lpf") or 20000
+                  local noise = util.dbamp(params:get("odash_noise_db") or -96)
+                  local natk = params:get("odash_noise_attack") or 0.01
+                  local nrel = params:get("odash_noise_decay") or 0.3
+                  local voice = "sea" .. tostring(self.id)
+                  local record = 0
+                  local path = ""
+                  engine.fm1(note_num, amp, pan, attack, decay, cAtk, cRel, mRatio, cRatio, index, iScale, fxsend, eqFreq,
+                    eqDB, lpf, noise, natk, nrel, voice, record, path)
+                  table.insert(self.active_notes, note_num)
+                else
+                  -- Unknown engine; skip audio trigger to avoid errors
+                end
               end
+            elseif self.output == 4 then
+              crow.output[1].volts = (note_num - 60) / 12
+              crow.output[2].execute()
+            elseif self.output == 5 then
+              crow.ii.jf.play_note((note_num - 60) / 12, 5)
             end
-          elseif self.output == 4 then
-            crow.output[1].volts = (note_num - 60) / 12
-            crow.output[2].execute()
-          elseif self.output == 5 then
-            crow.ii.jf.play_note((note_num - 60) / 12, 5)
+
+            -- MIDI out
+            if (self.output == 2 or self.output == 3) then
+              self.midi_out_device:note_on(note_num, velocity, self:get_param("midi_out_channel"))
+              table.insert(self.active_notes, note_num)
+            end
           end
 
-          -- MIDI out
-          if (self.output == 2 or self.output == 3) then
-            self.midi_out_device:note_on(note_num, velocity, self:get_param("midi_out_channel"))
-            table.insert(self.active_notes, note_num)
+          if offs_ms > 0 then
+            clock.run(function()
+              clock.sleep(offs_ms / 1000)
+              trigger_note()
+            end)
+          else
+            trigger_note()
           end
         end
 
@@ -417,15 +453,16 @@ function Seafarer:step()
                 -- advance one pattern respecting allowed max
                 if self.phrase + 1 <= (self.allowed_max_phrase or #phrases) then
                   self.phrase = self.phrase + 1
+                  -- occasional skip
+                  local skip_pct = (self.ensembleRef and self.ensembleRef.human_skip_pct) or 0
+                  if math.random(100) <= skip_pct then
+                    self.phrase = math.min(#phrases, self.phrase + 1)
+                  end
                 end
 
                 -- pattern 53 handling
                 if self.phrase >= #phrases then
                   self.phrase = #phrases
-                  if self.all_at_end then
-                    self.playing = false
-                    self:all_notes_off()
-                  end
                 end
               end
             end
@@ -449,6 +486,16 @@ function Seafarer:step()
 
         local steps = math.floor((beat_len / BASE_STEP) + 0.0001)
         waitCount = math.max(0, steps - 1)
+        -- add human advance delay at phrase boundary (in ms)
+        if self.phrase_note == 1 then
+          local adv_ms = (self.ensembleRef and self.ensembleRef.human_adv_delay_ms) or 0
+          if adv_ms > 0 then
+            local beat_sec = clock.get_beat_sec()
+            local beats = (adv_ms / 1000) / math.max(1e-6, beat_sec)
+            local add_steps = math.max(0, math.floor((beats / BASE_STEP) + 0.5))
+            waitCount = waitCount + add_steps
+          end
+        end
         self.time_in_phrase_sec = self.time_in_phrase_sec + (beat_len * 60) / math.max(1, clock.get_tempo())
       else
         waitCount = waitCount - 1

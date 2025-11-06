@@ -24,6 +24,15 @@ function Ensemble:new(seafarers)
     auto_catchup_enabled = true,
     selected_player = 1,
     pulse = nil,
+    -- Humanization
+    human_timing_ms = 30,
+    human_volume_pct = 5,
+    human_adv_delay_ms = 100,
+    human_skip_pct = 2,
+    -- Ending protocol
+    ending = false,
+    ending_cycles = 0,
+    ending_runner = nil,
   }
 
   setmetatable(o, Ensemble)
@@ -62,12 +71,19 @@ function Ensemble:setup_params()
     self.pulse:set_volume(v)
   end)
 
-  if mxsamples_instruments ~= nil and #mxsamples_instruments > 0 then
-    params:add{ type = "option", id = "pulse_mx_inst", name = "pulse mxsamples inst", options = mxsamples_instruments, default = 1 }
-    params:set_action("pulse_mx_inst", function(idx)
-      self.pulse:set_mx_instrument(mxsamples_instruments[idx])
-    end)
-  end
+  -- Humanization
+  params:add_separator("HUMANIZATION")
+  params:add{ type = "number", id = "human_timing_ms", name = "timing offset (ms)", min = 0, max = 30, default = self.human_timing_ms }
+  params:set_action("human_timing_ms", function(v) self.human_timing_ms = v end)
+
+  params:add{ type = "number", id = "human_volume_pct", name = "volume drift ±%", min = 0, max = 10, default = self.human_volume_pct }
+  params:set_action("human_volume_pct", function(v) self.human_volume_pct = v end)
+
+  params:add{ type = "number", id = "human_adv_ms", name = "advance delay (ms)", min = 0, max = 500, default = self.human_adv_delay_ms }
+  params:set_action("human_adv_ms", function(v) self.human_adv_delay_ms = v end)
+
+  params:add{ type = "number", id = "human_skip_pct", name = "skip pattern %", min = 0, max = 5, default = self.human_skip_pct }
+  params:set_action("human_skip_pct", function(v) self.human_skip_pct = v end)
 
   params:add{ type = "number", id = "min_active_players", name = "min active players", min = 1, max = 8, default = self.min_active_players }
   params:set_action("min_active_players", function(v) self.min_active_players = v end)
@@ -138,6 +154,42 @@ function Ensemble:update_median()
     s.allowed_min_phrase = math.max(1, self.median_pattern - 2)
     s.allowed_max_phrase = math.min(#phrases, self.median_pattern + 3)
   end
+end
+
+function Ensemble:maybe_start_ending(all_at_53)
+  if self.ending or not all_at_53 then return end
+  self.ending = true
+  self.ending_cycles = math.random(3, 5)
+  self.ending_runner = clock.run(function()
+    local steps = 20
+    for c = 1, self.ending_cycles do
+      -- Up
+      for i = 1, steps do
+        local scale = util.linlin(1, steps, 0.7, 1.0, i)
+        for _, s in ipairs(self.players) do s.velocity_scale = scale end
+        clock.sleep((math.random(20, 30) / 2) / steps)
+      end
+      -- Down
+      for i = 1, steps do
+        local scale = util.linlin(1, steps, 1.0, 0.7, i)
+        for _, s in ipairs(self.players) do s.velocity_scale = scale end
+        clock.sleep((math.random(20, 30) / 2) / steps)
+      end
+    end
+    -- Individual fade outs
+    for _, s in ipairs(self.players) do
+      local steps2 = 15
+      local startv = s.velocity_scale or 1.0
+      for i = 1, steps2 do
+        s.velocity_scale = util.linlin(1, steps2, startv, 0, i)
+        clock.sleep(2 / steps2)
+      end
+      s.playing = false
+      s:all_notes_off()
+    end
+    -- Pulse fades last
+    if self.pulse_enabled then self.pulse:begin_fade(3) end
+  end)
 end
 
 return Ensemble
