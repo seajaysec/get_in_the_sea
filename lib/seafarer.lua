@@ -113,7 +113,7 @@ end
 
 function Seafarer:add_instrument_param()
   if mxsamples ~= nil then
-    params:add { type = "option", id = self.id .. "_mxsamples_instrument", name = "S" .. self.id .. " instrument", options = mxsamples_instruments,
+    params:add { type = "option", id = self.id .. "_mxsamples_instrument", name = "S" .. self.id, options = mxsamples_instruments,
       action = function(value)
         self:all_notes_off()
         self.mx_instrument = mxsamples_instruments[value]
