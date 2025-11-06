@@ -181,7 +181,7 @@ end
 function Seafarer:step()
   clock.sync(1)
   local waitCount = 0
-  local BASE_STEP = 0.03125 -- 1/128 note resolution
+  local BASE_STEP = 0.0625 -- 1/64 note resolution
 
   while true do
     if self.playing then
@@ -282,8 +282,8 @@ function Seafarer:step()
         -- compute wait time (in 16th notes)
         local beat_len
         if event.is_grace then
-          local grace_map = { 0.03125, 0.0625, 0.125, 0.25 }
-          local idx = params:get("grace_len_beats") or 3
+          local grace_map = { 0.0625, 0.125, 0.25 }
+          local idx = params:get("grace_len_beats") or 2
           beat_len = grace_map[idx] or 0.125
           self.carry_beat_adjustment = beat_len
         else
