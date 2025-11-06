@@ -85,7 +85,6 @@ function Seafarer:new(id)
     active_notes = {},
     carry_beat_adjustment = 0,
     octave = 0,
-    timber_sample_id = 1,
   }
 
   setmetatable(o, Seafarer)
@@ -150,13 +149,7 @@ function Seafarer:add_midi_channel_param()
     end }
 end
 
-function Seafarer:add_timber_sample_param()
-  params:add { type = "number", id = self.id .. "_timber_sample_id", name = "S" .. self.id .. " timber sample",
-    min = 1, max = 36, default = 1,
-    action = function(value)
-      self.timber_sample_id = value
-    end }
-end
+-- (no timber params)
 
 function Seafarer:get_param(idx)
   return params:get(self.id .. "_" .. idx)
@@ -221,30 +214,24 @@ function Seafarer:step()
               elseif ae_lower == "passersby" then
                 engine.noteOn(note_num, freq, velocity)
                 table.insert(self.active_notes, note_num)
-              elseif ae_lower == "timber" then
-                local sample_id = self.timber_sample_id or 1
-                engine.amp(sample_id, 1)
-                engine.startFrame(sample_id, 0)
-                engine.noteOn(sample_id, freq, 1, sample_id)
-                table.insert(self.active_notes, note_num)
               elseif ae_lower == "odashodasho" then
                 local amp = math.min(1.0, math.max(0.1, (velocity or 100) / 127))
-                local pan = 0
-                local attack = 0.01
-                local decay = 0.5
-                local cAtk = 4
-                local cRel = -4
-                local mRatio = 1
-                local cRatio = 1
-                local index = 1.5
-                local iScale = 4
-                local fxsend = -18
-                local eqFreq = 1200
-                local eqDB = 0
-                local lpf = 20000
-                local noise = 0
-                local natk = 0.01
-                local nrel = 0.3
+                local pan = params:get("odash_pan") or 0
+                local attack = params:get("odash_attack") or 0.01
+                local decay = params:get("odash_decay") or 0.5
+                local cAtk = params:get("odash_attack_curve") or 4
+                local cRel = params:get("odash_decay_curve") or -4
+                local mRatio = params:get("odash_mod_ratio") or 1
+                local cRatio = params:get("odash_car_ratio") or 1
+                local index = params:get("odash_index") or 1.5
+                local iScale = params:get("odash_index_scale") or 4
+                local fxsend = params:get("odash_reverb_db") or -18
+                local eqFreq = params:get("odash_eq_freq") or 1200
+                local eqDB = params:get("odash_eq_db") or 0
+                local lpf = params:get("odash_lpf") or 20000
+                local noise = util.dbamp(params:get("odash_noise_db") or -96)
+                local natk = params:get("odash_noise_attack") or 0.01
+                local nrel = params:get("odash_noise_decay") or 0.3
                 local voice = "sea" .. tostring(self.id)
                 local record = 0
                 local path = ""
