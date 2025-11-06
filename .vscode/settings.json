@@ -1,3 +1,4 @@
 {
-    "Lua.diagnostics.enable": false
+    "Lua.diagnostics.enable": false,
+    "cSpell.enabled": false
 }
