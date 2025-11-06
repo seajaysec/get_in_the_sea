@@ -398,7 +398,8 @@ function Seafarer:step()
                 -- rest behavior at transitions
                 local active_players = 0
                 if self.ensembleRef ~= nil then
-                  for _, s in ipairs(self.ensembleRef.players) do if s.playing and not s.is_resting then active_players = active_players + 1 end end
+                  for _, s in ipairs(self.ensembleRef.players) do if s.playing and not s.is_resting then active_players =
+                      active_players + 1 end end
                 end
                 local min_active = (self.ensembleRef and self.ensembleRef.min_active_players) or 3
                 local rest_pct = (self.ensembleRef and self.ensembleRef.rest_probability_pct) or 15
