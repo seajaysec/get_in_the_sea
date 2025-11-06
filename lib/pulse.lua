@@ -1,5 +1,7 @@
 -- Pulse agent: optional metronomic eighth-note voice
 
+MusicUtil = require "musicutil"
+
 local Pulse = {}
 Pulse.__index = Pulse
 
