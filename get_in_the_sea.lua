@@ -29,8 +29,9 @@ local any_playing = false
 local ensemble = nil
 local k1_down = false
 local ui_focus = "header" -- 'header' or 'seafarers'
-local header_items = { "mode", "pulse", "tempo", "median" }
+local header_items = { "mode", "pulse", "tempo", "info" }
 local header_index = 1
+local ui_show_info = false
 
 function init()
   -- instantiate seafarers
@@ -98,10 +99,23 @@ function enc(n, d)
   elseif n == 2 then
     if ui_focus == "header" then
       local count = #header_items
+      local prev = header_index
       header_index = header_index + d
       if header_index < 1 then header_index = 1 end
       if header_index > count then header_index = count end
+      if header_items[header_index] == "info" and d > 0 then
+        -- bridge to seafarers from Info using E2
+        ui_focus = "seafarers"
+      end
     else
+      -- bridge back to header Info when moving left from first seafarer
+      local sel_before = params:get("selected_player") or 1
+      if d < 0 and sel_before <= 1 then
+        ui_focus = "header"
+        -- jump to Info header item
+        for i, nme in ipairs(header_items) do if nme == "info" then header_index = i break end end
+        return
+      end
       params:delta("selected_player", d)
     end
   elseif n == 3 then
@@ -115,7 +129,8 @@ function enc(n, d)
       elseif item == "tempo" then
         params:delta("ensemble_tempo", d)
       else
-        -- median is read-only
+        -- Info: toggle info screen
+        ui_show_info = not ui_show_info
       end
     else
       -- seafarers focus: E3 advances based on mode
@@ -180,7 +195,7 @@ end
 
 function redraw()
   -- External: delegate screen drawing to UI module
-  UI.draw(seafarers, any_playing, ensemble, ui_focus, header_index)
+  UI.draw(seafarers, any_playing, ensemble, ui_focus, header_index, ui_show_info)
 end
 
 function cleanup()
