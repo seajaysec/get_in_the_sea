@@ -10,7 +10,7 @@ function Pulse:new()
     enabled = false,
     running = false,
     volume = 0.8,
-    mxsamples_instrument = nil,
+    ensembleRef = nil,
     runner = nil,
   }
   setmetatable(o, Pulse)
@@ -19,10 +19,6 @@ end
 
 function Pulse:set_volume(v)
   self.volume = v or self.volume
-end
-
-function Pulse:set_mx_instrument(name)
-  self.mxsamples_instrument = name
 end
 
 local function engine_supports_poly()
@@ -51,7 +47,13 @@ function Pulse:play_tick()
   local freq = note_num_to_freq(note_num)
 
   if engine_supports_mxsamples() then
-    local inst = self.mxsamples_instrument or (mxsamples_instruments and mxsamples_instruments[1])
+    -- Use an existing instrument if any player has one selected
+    local inst = nil
+    if self.ensembleRef and self.ensembleRef.players and #self.ensembleRef.players > 0 then
+      for _, s in ipairs(self.ensembleRef.players) do
+        if s.mx_instrument and s.mx_instrument ~= "" then inst = s.mx_instrument break end
+      end
+    end
     if inst ~= nil then
       skeys:on({ name = inst, midi = note_num, velocity = vel })
       clock.run(function()
@@ -63,7 +65,7 @@ function Pulse:play_tick()
   end
 
   if engine_supports_poly() then
-    engine.amp(self.volume)
+    -- Respect current engine parameters; just trigger
     engine.hz(freq)
   elseif engine_supports_fm7() then
     engine.start(note_num, freq)
@@ -86,6 +88,7 @@ function Pulse:start(ensemble)
   if self.running then return end
   self.enabled = true
   self.running = true
+  self.ensembleRef = ensemble
   self.runner = clock.run(function()
     -- Start a little before entry per spec (5s)
     clock.sleep(5)
@@ -100,6 +103,20 @@ end
 function Pulse:stop()
   self.enabled = false
   self.running = false
+end
+
+function Pulse:begin_fade(duration)
+  if not self.enabled then return end
+  local dur = duration or 3
+  clock.run(function()
+    local steps = 20
+    local startv = self.volume
+    for i = 1, steps do
+      self.volume = util.linlin(1, steps, startv, 0, i)
+      clock.sleep(dur / steps)
+    end
+    self:stop()
+  end)
 end
 
 return Pulse
