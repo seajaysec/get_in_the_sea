@@ -10,34 +10,14 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
 
   -- title removed to declutter
 
-  -- header: page bar
-  screen.font_size(8)
-  if ui_pages ~= nil and #ui_pages > 0 then
-    local x_start = 0
-    local y_start = 8
-    local step_x = 42
-    for i, p in ipairs(ui_pages) do
-      local col = ((i - 1) % 3)
-      local row = math.floor((i - 1) / 3)
-      local x = x_start + (col * step_x)
-      local y = y_start + (row * 9)
-      screen.move(x, y)
-      if i == ui_page_index then
-        screen.level(15)
-        screen.text("[" .. (p.label or p.id or "?") .. "]")
-      else
-        screen.level(10)
-        screen.text(p.label or p.id or "?")
-      end
-    end
-  end
+  -- No menubar; pages are implied and full-screen
 
   -- content area
   local function draw_info_status()
     if ensemble == nil then return end
-    -- Info: Status page (existing metrics)
-    screen.font_size(8)
-    screen.move(0, 26)
+    -- Info: Status page (existing metrics), spaced for readability
+    screen.font_size(10)
+    screen.move(0, 14)
     screen.level(15)
     screen.text("Info")
 
@@ -69,26 +49,19 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
     local total = math.max(1, #phrases)
     local pct = math.floor((median / total) * 100)
 
-    screen.move(0, 36)
+    screen.move(0, 28)
     screen.level(12)
     screen.text(string.format("Time %s  Complete %d%%", time_str, pct))
 
-    screen.move(0, 44)
+    screen.move(0, 40)
     screen.text(string.format("Median %d  Spread %d", median, spread))
 
     screen.move(0, 52)
     screen.text(string.format("Active %d  Resting %d  Ready %d", active, resting, ready))
 
-    screen.move(0, 60)
+    screen.move(0, 64)
     screen.level(10)
     screen.text(string.format("At53 %d  Ending %s", at53, ensemble.ending and "on" or "off"))
-
-    -- final row: positions
-    -- positions row (tight at bottom)
-    screen.move(0, 62)
-    local pos = {}
-    for i = 1, #seafarers do pos[i] = string.format("%02d", seafarers[i].phrase or 1) end
-    screen.text("Pos: " .. table.concat(pos, " "))
 
     screen.update()
   end
@@ -124,7 +97,7 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
     end
     screen.level(15)
     if ensemble and ensemble.ending then
-      screen.move(0, 62)
+      screen.move(0, 64)
       screen.level(15)
       screen.text("Ending...")
     end
@@ -137,9 +110,9 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
       { label = "Pulse", value = (ensemble.pulse_enabled and "on" or "off") },
       { label = "Tempo", value = string.format("%dbpm", math.floor(ensemble.tempo_bpm or clock.get_tempo() or 120)) },
     }
-    screen.font_size(8)
+    screen.font_size(10)
     for i, it in ipairs(items) do
-      screen.move(0, 28 + i * 10)
+      screen.move(0, 16 + i * 14)
       screen.level(i == ui_element_index and 15 or 10)
       local txt = it.label .. ": " .. it.value
       if i == ui_element_index then txt = "[" .. txt .. "]" end
@@ -148,7 +121,7 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
   end
 
   local function draw_human_page()
-    screen.font_size(8)
+    screen.font_size(10)
     local items = {
       { label = "Timing ms", value = params:get("human_timing_ms") },
       { label = "Vol drift %", value = params:get("human_volume_pct") },
@@ -156,7 +129,7 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
       { label = "Skip %", value = params:get("human_skip_pct") },
     }
     for i, it in ipairs(items) do
-      screen.move(0, 28 + i * 10)
+      screen.move(0, 16 + i * 14)
       screen.level(i == ui_element_index and 15 or 10)
       local txt = string.format("%s: %s", it.label, tostring(it.value))
       if i == ui_element_index then txt = "[" .. txt .. "]" end
@@ -165,17 +138,21 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
   end
 
   local function draw_engine_page()
-    screen.font_size(8)
+    screen.font_size(10)
     local ae = engine.name or "?"
     local sel = (ensemble and ensemble.selected_player) or 1
+    -- Header (non-editable)
+    screen.move(0, 14)
+    screen.level(12)
+    screen.text("Engine: " .. ae)
+    -- Editable rows begin after header
     local rows = {}
-    table.insert(rows, { label = "Engine", value = ae })
     local ael = string.lower(ae or "")
     if ael == "mxsamples" then
       if mxsamples_instruments ~= nil and #mxsamples_instruments > 0 then
         local idx = params:get(sel .. "_mxsamples_instrument") or 1
         local name = mxsamples_instruments[idx] or "?"
-        table.insert(rows, { label = "S" .. sel .. " instr", value = name })
+        table.insert(rows, { label = "S" .. sel .. " instrument", value = name })
       end
     elseif ael == "polyperc" then
       for _, id in ipairs({ "amp", "release", "cutoff", "gain", "pan" }) do
@@ -193,7 +170,7 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
       -- FM7 or unknown: no additional params
     end
     for i, it in ipairs(rows) do
-      screen.move(0, 28 + i * 10)
+      screen.move(0, 28 + i * 14)
       screen.level(i == ui_element_index and 15 or 10)
       local val = (type(it.value) == "number") and util.round(it.value, 0.01) or tostring(it.value)
       local txt = string.format("%s: %s", it.label, val)
@@ -203,15 +180,24 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
   end
 
   local function draw_output_page()
-    screen.font_size(8)
+    screen.font_size(10)
     local sel = (ensemble and ensemble.selected_player) or 1
+    -- Header (non-editable)
+    screen.move(0, 14)
+    screen.level(12)
+    screen.text("Seafarer S" .. sel)
+    local out_idx = params:get(sel .. "_output") or 1
+    local out_name = (options and options.OUTPUT and options.OUTPUT[out_idx]) and options.OUTPUT[out_idx] or tostring(out_idx)
+    local dev = params:get(sel .. "midi_out_device") or 1
+    local dev_name = (midi and midi.vports and midi.vports[dev] and midi.vports[dev].name) or ("dev " .. dev)
+    local ch = params:get(sel .. "_midi_out_channel") or 1
     local items = {
-      { label = "S" .. sel .. " output", value = params:get(sel .. "_output") },
-      { label = "S" .. sel .. " midi dev", value = params:get(sel .. "midi_out_device") },
-      { label = "S" .. sel .. " midi ch", value = params:get(sel .. "_midi_out_channel") },
+      { label = "Output", value = out_name },
+      { label = "MIDI dev", value = dev_name },
+      { label = "MIDI ch", value = ch },
     }
     for i, it in ipairs(items) do
-      screen.move(0, 28 + i * 10)
+      screen.move(0, 28 + i * 14)
       screen.level(i == ui_element_index and 15 or 10)
       local txt = string.format("%s: %s", it.label, tostring(it.value))
       if i == ui_element_index then txt = "[" .. txt .. "]" end
@@ -220,7 +206,7 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
   end
 
   local function draw_random_page()
-    screen.font_size(8)
+    screen.font_size(10)
     local function onoff(id)
       local v = params:get(id) or 1
       return (v == 2) and "on" or "off"
@@ -232,7 +218,7 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
       { label = "Octaves", value = onoff("rand_octaves") },
     }
     for i, it in ipairs(items) do
-      screen.move(0, 28 + i * 10)
+      screen.move(0, 16 + i * 14)
       screen.level(i == ui_element_index and 15 or 10)
       local txt = string.format("%s: %s", it.label, tostring(it.value))
       if i == ui_element_index then txt = "[" .. txt .. "]" end
