@@ -281,7 +281,9 @@ function Seafarer:step()
         -- compute wait time (in 16th notes)
         local beat_len
         if event.is_grace then
-          beat_len = params:get("grace_len_beats") or 0.125
+          local grace_map = { 0.03125, 0.0625, 0.125, 0.25 }
+          local idx = params:get("grace_len_beats") or 3
+          beat_len = grace_map[idx] or 0.125
           self.carry_beat_adjustment = beat_len
         else
           local dur = event.duration or 0
