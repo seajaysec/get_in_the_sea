@@ -222,10 +222,33 @@ function Seafarer:step()
                 engine.noteOn(note_num, freq, velocity)
                 table.insert(self.active_notes, note_num)
               elseif ae_lower == "timber" then
-                local sample_id = 1
+                local sample_id = self.timber_sample_id or 1
                 engine.amp(sample_id, 1)
                 engine.startFrame(sample_id, 0)
                 engine.noteOn(sample_id, freq, 1, sample_id)
+                table.insert(self.active_notes, note_num)
+              elseif ae_lower == "odashodasho" then
+                local amp = math.min(1.0, math.max(0.1, (velocity or 100) / 127))
+                local pan = 0
+                local attack = 0.01
+                local decay = 0.5
+                local cAtk = 4
+                local cRel = -4
+                local mRatio = 1
+                local cRatio = 1
+                local index = 1.5
+                local iScale = 4
+                local fxsend = -18
+                local eqFreq = 1200
+                local eqDB = 0
+                local lpf = 20000
+                local noise = 0
+                local natk = 0.01
+                local nrel = 0.3
+                local voice = "sea" .. tostring(self.id)
+                local record = 0
+                local path = ""
+                engine.fm1(note_num, amp, pan, attack, decay, cAtk, cRel, mRatio, cRatio, index, iScale, fxsend, eqFreq, eqDB, lpf, noise, natk, nrel, voice, record, path)
                 table.insert(self.active_notes, note_num)
               else
                 -- Unknown engine; skip audio trigger to avoid errors
