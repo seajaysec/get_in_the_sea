@@ -88,6 +88,12 @@ end
 Midi.register_transport(m, seafarers)
 
 function enc(n, d)
+  if ensemble == nil then return end
+  if n == 2 then
+    params:delta("selected_player", d)
+  elseif n == 3 then
+    params:delta("ensemble_tempo", d)
+  end
 end
 
 function key(n, z)
