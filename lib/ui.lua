@@ -2,7 +2,7 @@
 
 local UI = {}
 
-function UI.draw(seafarers, any_playing)
+function UI.draw(seafarers, any_playing, ensemble)
   screen.clear()
   screen.font_face(12)
   screen.font_size(12)
@@ -12,6 +12,17 @@ function UI.draw(seafarers, any_playing)
   screen.text("Get in the sea!")
 
   screen.font_size(10)
+
+  if ensemble ~= nil then
+    screen.move(0, 20)
+    screen.text("Mode: " .. (ensemble:get_mode() or "autonomous"))
+    screen.move(120, 20)
+    screen.text_right(string.format("%dbpm", math.floor(ensemble.tempo_bpm or clock.get_tempo() or 120)))
+    screen.move(0, 32)
+    screen.text("Median: " .. tostring(ensemble.median_pattern or 1))
+    screen.move(120, 32)
+    screen.text_right("Pulse " .. ((ensemble.pulse_enabled and "on") or "off"))
+  end
 
   local x = 0
   local y = 24
