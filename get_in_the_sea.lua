@@ -24,7 +24,7 @@ function init()
     return tab.contains(engine.names, name)
   end
 
-  local engines_list = {"PolyPerc", "FM7", "Passersby", "Timber", "Odashodasho"}
+  local engines_list = {"PolyPerc", "FM7", "Passersby", "Odashodasho"}
   if libInstalled("mx.samples/lib/mx.samples") then
     table.insert(engines_list, "MxSamples")
   end
@@ -71,12 +71,6 @@ function init()
     mxSamplesInit()
   end
 
-  -- GLOBAL settings
-  params:add_separator("GLOBAL")
-  params:add { type = "number", id = "max_drift", name = "max phrase drift", min = 1, max = 10, default = 3 }
-  params:add { type = "number", id = "repeat_probability", name = "repeat probability", min = 0, max = 10, default = 5 }
-  params:add { type = "control", id = "grace_len_beats", name = "grace length (beats)", controlspec = controlspec.new(0.0625, 0.5, 'lin', 0, 0.0625, 'beats') }
-
   -- instantiate seafarers
   table.insert(seafarers, Seafarer:new(1))
   table.insert(seafarers, Seafarer:new(2))
@@ -88,24 +82,9 @@ function init()
   table.insert(seafarers, Seafarer:new(7))
   table.insert(seafarers, Seafarer:new(8))
 
-  -- ORCA-style sections (no menu diving)
-  -- OUTPUT
-  params:add_separator("SEAFARER OUTPUT")
-  for _, s in ipairs(seafarers) do s:add_output_param() end
+  -- AUDIO ENGINE SETTINGS (placed directly after ENGINE activation)
+  params:add_separator("AUDIO ENGINE SETTINGS")
 
-  -- OCTAVE
-  params:add_separator("SEAFARER OCTAVE")
-  for _, s in ipairs(seafarers) do s:add_octave_param() end
-
-  -- MIDI DEVICE
-  params:add_separator("SEAFARER MIDI DEVICE")
-  for _, s in ipairs(seafarers) do s:add_midi_device_param() end
-
-  -- MIDI CHANNEL
-  params:add_separator("SEAFARER MIDI CHANNEL")
-  for _, s in ipairs(seafarers) do s:add_midi_channel_param() end
-
-  -- ENGINE SUBMENUS
   -- PolyPerc params
   params:add_group("PolyPerc", 6)
   cs_AMP = controlspec.new(0, 1, 'lin', 0, 0.5, '')
@@ -133,13 +112,88 @@ function init()
 
   -- MxSamples per-seafarer instruments
   if mxsamples ~= nil and #mxsamples_instruments > 0 then
-    params:add_group("MxSamples", #seafarers)
+    params:add_group("MxSamples", #seafarers + 1)
+    params:add_trigger("mxsamples_randomize", "Randomize instruments")
+    params:set_action("mxsamples_randomize", function()
+      if #mxsamples_instruments == 0 then return end
+      for _, s in ipairs(seafarers) do
+        local idx = math.random(1, #mxsamples_instruments)
+        params:set(s.id .. "_mxsamples_instrument", idx)
+      end
+    end)
     for _, s in ipairs(seafarers) do s:add_instrument_param() end
   end
 
-  -- Timber per-seafarer sample ids
-  params:add_group("Timber", #seafarers)
-  for _, s in ipairs(seafarers) do s:add_timber_sample_param() end
+  -- Odashodasho params
+  params:add_group("Odashodasho", 16)
+  params:add { type = "control", id = "odash_attack", name = "attack", controlspec = controlspec.new(0, 8, 'lin', 0.01, 0.01, 's') }
+  params:add { type = "control", id = "odash_decay", name = "decay", controlspec = controlspec.new(0, 8, 'lin', 0.01, 0.5, 's') }
+  params:add { type = "control", id = "odash_attack_curve", name = "attack curve", controlspec = controlspec.new(-8, 8, 'lin', 1, 4, '') }
+  params:add { type = "control", id = "odash_decay_curve", name = "decay curve", controlspec = controlspec.new(-8, 8, 'lin', 1, -4, '') }
+  params:add { type = "control", id = "odash_mod_ratio", name = "mod ratio", controlspec = controlspec.new(0, 8, 'lin', 0.01, 1, 'x') }
+  params:add { type = "control", id = "odash_car_ratio", name = "car ratio", controlspec = controlspec.new(0, 50, 'lin', 0.01, 1, 'x') }
+  params:add { type = "control", id = "odash_index", name = "index", controlspec = controlspec.new(0, 200, 'lin', 0.1, 1.5, '') }
+  params:add { type = "control", id = "odash_index_scale", name = "index scale", controlspec = controlspec.new(0, 10, 'lin', 0.1, 4, '') }
+  params:add { type = "control", id = "odash_reverb_db", name = "reverb send (dB)", controlspec = controlspec.new(-96, 12, 'lin', 0.1, -18, 'dB') }
+  params:add_control("odash_eq_freq", "eq freq", controlspec.WIDEFREQ)
+  params:set("odash_eq_freq", 1200)
+  params:add { type = "control", id = "odash_eq_db", name = "eq boost (dB)", controlspec = controlspec.new(-96, 36, 'lin', 0.1, 0, 'dB') }
+  params:add_control("odash_lpf", "lpf", controlspec.WIDEFREQ)
+  params:set("odash_lpf", 20000)
+  params:add { type = "control", id = "odash_noise_db", name = "noise (dB)", controlspec = controlspec.new(-96, 20, 'lin', 1, -96, 'dB') }
+  params:add { type = "control", id = "odash_noise_attack", name = "noise attack", controlspec = controlspec.new(0, 6, 'lin', 0.01, 0.01, 's') }
+  params:add { type = "control", id = "odash_noise_decay", name = "noise decay", controlspec = controlspec.new(0, 6, 'lin', 0.01, 0.3, 's') }
+  params:add { type = "control", id = "odash_pan", name = "pan", controlspec = controlspec.new(-1, 1, 'lin', 0, 0, '') }
+
+  -- Passersby params
+  params:add_group("Passersby", 16)
+  params:add { type = "control", id = "pb_amp", name = "amp", controlspec = controlspec.new(0, 1, 'lin', 0, 1, '') , action = function(v) if string.lower(engine.name)=="passersby" then engine.amp(v) end end }
+  params:add { type = "control", id = "pb_attack", name = "attack", controlspec = controlspec.new(0.003, 8, 'lin', 0.001, 0.04, 's') , action = function(v) if string.lower(engine.name)=="passersby" then engine.attack(v) end end }
+  params:add { type = "control", id = "pb_decay", name = "decay", controlspec = controlspec.new(0.01, 8, 'lin', 0.001, 1, 's') , action = function(v) if string.lower(engine.name)=="passersby" then engine.decay(v) end end }
+  params:add { type = "control", id = "pb_drift", name = "drift", controlspec = controlspec.new(0, 1, 'lin', 0, 0, '') , action = function(v) if string.lower(engine.name)=="passersby" then engine.drift(v) end end }
+  params:add_option("pb_env_type", "env type", {"LPG","Sustain"}, 1)
+  params:set_action("pb_env_type", function(i) if string.lower(engine.name)=="passersby" then engine.envType(i) end end)
+  params:add { type = "control", id = "pb_fm1_amount", name = "fm1 amount", controlspec = controlspec.new(0, 1, 'lin', 0, 0, '') , action = function(v) if string.lower(engine.name)=="passersby" then engine.fm1Amount(v) end end }
+  params:add { type = "control", id = "pb_fm1_ratio", name = "fm1 ratio", controlspec = controlspec.new(0.1, 10, 'lin', 0.01, 3.3, 'x') , action = function(v) if string.lower(engine.name)=="passersby" then engine.fm1Ratio(v) end end }
+  params:add { type = "control", id = "pb_fm2_amount", name = "fm2 amount", controlspec = controlspec.new(0, 1, 'lin', 0, 0, '') , action = function(v) if string.lower(engine.name)=="passersby" then engine.fm2Amount(v) end end }
+  params:add { type = "control", id = "pb_fm2_ratio", name = "fm2 ratio", controlspec = controlspec.new(0.1, 1, 'lin', 0.01, 0.66, 'x') , action = function(v) if string.lower(engine.name)=="passersby" then engine.fm2Ratio(v) end end }
+  params:add { type = "control", id = "pb_glide", name = "glide", controlspec = controlspec.new(0, 5, 'lin', 0, 0, '') , action = function(v) if string.lower(engine.name)=="passersby" then engine.glide(v) end end }
+  params:add { type = "control", id = "pb_lfo_freq", name = "lfo freq", controlspec = controlspec.new(0.001, 10, 'exp', 0, 0.5, 'hz') , action = function(v) if string.lower(engine.name)=="passersby" then engine.lfoFreq(v) end end }
+  params:add_option("pb_lfo_shape", "lfo shape", {"Triangle","Ramp","Square","Random"}, 1)
+  params:set_action("pb_lfo_shape", function(i) if string.lower(engine.name)=="passersby" then engine.lfoShape(i) end end)
+  params:add { type = "control", id = "pb_wave_folds", name = "wave folds", controlspec = controlspec.new(0, 3, 'lin', 0, 0, '') , action = function(v) if string.lower(engine.name)=="passersby" then engine.waveFolds(v) end end }
+  params:add { type = "control", id = "pb_wave_shape", name = "wave shape", controlspec = controlspec.new(0, 1, 'lin', 0, 0, '') , action = function(v) if string.lower(engine.name)=="passersby" then engine.waveShape(v) end end }
+  params:add { type = "control", id = "pb_reverb_mix", name = "reverb mix", controlspec = controlspec.new(0, 1, 'lin', 0, 0, '') , action = function(v) if string.lower(engine.name)=="passersby" then engine.reverbMix(v) end end }
+  params:add { type = "control", id = "pb_timbre_all", name = "timbre all", controlspec = controlspec.new(0, 1, 'lin', 0, 0, '') , action = function(v) if string.lower(engine.name)=="passersby" then engine.timbreAll(v) end end }
+
+  -- GLOBAL settings (after engine settings)
+  params:add_separator("GLOBAL")
+  params:add { type = "number", id = "max_drift", name = "max phrase drift", min = 1, max = 10, default = 3 }
+  params:add { type = "number", id = "repeat_probability", name = "repeat probability", min = 0, max = 10, default = 5 }
+  params:add { type = "control", id = "grace_len_beats", name = "grace length (beats)", controlspec = controlspec.new(0.0625, 0.5, 'lin', 0, 0.0625, 'beats') }
+
+  -- ORCA-style sections (no menu diving)
+  -- OUTPUT
+  params:add_separator("SEAFARER OUTPUT")
+  for _, s in ipairs(seafarers) do s:add_output_param() end
+
+  -- OCTAVE
+  params:add_separator("SEAFARER OCTAVE")
+  for _, s in ipairs(seafarers) do s:add_octave_param() end
+  do
+    local default_octaves = {0, 0, -1, -2, -3, 1, 2, 3}
+    for i, s in ipairs(seafarers) do
+      params:set(s.id .. "_octave", default_octaves[i])
+    end
+  end
+
+  -- MIDI DEVICE
+  params:add_separator("SEAFARER MIDI DEVICE")
+  for _, s in ipairs(seafarers) do s:add_midi_device_param() end
+
+  -- MIDI CHANNEL
+  params:add_separator("SEAFARER MIDI CHANNEL")
+  for _, s in ipairs(seafarers) do s:add_midi_channel_param() end
 
   params:default()
 
