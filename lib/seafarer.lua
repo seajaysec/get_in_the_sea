@@ -167,6 +167,10 @@ function Seafarer:all_notes_off()
 
     if (self.output == 1 or self.output == 3) and engine.name == "MxSamples" then
       skeys:off({ name = self.mx_instrument, midi = a })
+    elseif (self.output == 1 or self.output == 3) and string.lower(engine.name) == "fm7" then
+      engine.stop(a)
+    elseif (self.output == 1 or self.output == 3) and string.lower(engine.name) == "passersby" then
+      engine.noteOff(a)
     end
   end
   self.active_notes = {}
@@ -198,7 +202,25 @@ function Seafarer:step()
               skeys:on({ name = self.mx_instrument, midi = note_num, velocity = velocity })
               table.insert(self.active_notes, note_num)
             else
-              engine.hz(freq)
+              local ae_lower = string.lower(ae or "")
+              if ae_lower == "polyperc" then
+                engine.hz(freq)
+                table.insert(self.active_notes, note_num)
+              elseif ae_lower == "fm7" then
+                engine.start(note_num, freq)
+                table.insert(self.active_notes, note_num)
+              elseif ae_lower == "passersby" then
+                engine.noteOn(note_num, freq, velocity)
+                table.insert(self.active_notes, note_num)
+              elseif ae_lower == "timber" then
+                local sample_id = 1
+                engine.amp(sample_id, 1)
+                engine.startFrame(sample_id, 0)
+                engine.noteOn(sample_id, freq, 1, sample_id)
+                table.insert(self.active_notes, note_num)
+              else
+                -- Unknown engine; skip audio trigger to avoid errors
+              end
             end
           elseif self.output == 4 then
             crow.output[1].volts = (note_num - 60) / 12
