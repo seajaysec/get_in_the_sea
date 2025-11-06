@@ -93,12 +93,6 @@ function init()
   params:add_separator("SEAFARER OUTPUT")
   for _, s in ipairs(seafarers) do s:add_output_param() end
 
-  -- INSTRUMENT (MxSamples only)
-  if mxsamples ~= nil and #mxsamples_instruments > 0 then
-    params:add_separator("SEAFARER INSTRUMENT")
-    for _, s in ipairs(seafarers) do s:add_instrument_param() end
-  end
-
   -- OCTAVE
   params:add_separator("SEAFARER OCTAVE")
   for _, s in ipairs(seafarers) do s:add_octave_param() end
@@ -110,6 +104,42 @@ function init()
   -- MIDI CHANNEL
   params:add_separator("SEAFARER MIDI CHANNEL")
   for _, s in ipairs(seafarers) do s:add_midi_channel_param() end
+
+  -- ENGINE SUBMENUS
+  -- PolyPerc params
+  params:add_group("PolyPerc", 6)
+  cs_AMP = controlspec.new(0, 1, 'lin', 0, 0.5, '')
+  params:add { type = "control", id = "amp", controlspec = cs_AMP, action = function(x) if string.lower(engine.name) == "polyperc" then engine.amp(x) end end }
+
+  cs_PW = controlspec.new(0, 100, 'lin', 0, 50, '%')
+  params:add { type = "control", id = "pw", controlspec = cs_PW,
+    action = function(x) if string.lower(engine.name) == "polyperc" then engine.pw(x / 100) end end }
+
+  cs_REL = controlspec.new(0.1, 3.2, 'lin', 0, 1.2, 's')
+  params:add { type = "control", id = "release", controlspec = cs_REL,
+    action = function(x) if string.lower(engine.name) == "polyperc" then engine.release(x) end end }
+
+  cs_CUT = controlspec.new(50, 5000, 'exp', 0, 800, 'hz')
+  params:add { type = "control", id = "cutoff", controlspec = cs_CUT,
+    action = function(x) if string.lower(engine.name) == "polyperc" then engine.cutoff(x) end end }
+
+  cs_GAIN = controlspec.new(0, 4, 'lin', 0, 1, '')
+  params:add { type = "control", id = "gain", controlspec = cs_GAIN,
+    action = function(x) if string.lower(engine.name) == "polyperc" then engine.gain(x) end end }
+
+  cs_PAN = controlspec.new(-1, 1, 'lin', 0, 0, '')
+  params:add { type = "control", id = "pan", controlspec = cs_PAN,
+    action = function(x) if string.lower(engine.name) == "polyperc" then engine.pan(x) end end }
+
+  -- MxSamples per-seafarer instruments
+  if mxsamples ~= nil and #mxsamples_instruments > 0 then
+    params:add_group("MxSamples", #seafarers)
+    for _, s in ipairs(seafarers) do s:add_instrument_param() end
+  end
+
+  -- Timber per-seafarer sample ids
+  params:add_group("Timber", #seafarers)
+  for _, s in ipairs(seafarers) do s:add_timber_sample_param() end
 
   params:default()
 
