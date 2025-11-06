@@ -3,11 +3,13 @@
 ## Operational Modes
 
 ### 1. AUTONOMOUS MODE
+
 - All 8 players are AI agents following the rules below
 - Players make independent decisions about advancement, rests, dynamics
 - User controls: Start, Stop, Tempo, Pulse toggle
 
 ### 2. SEMI-AUTONOMOUS MODE  
+
 - All 8 players advance patterns together when user triggers
 - User controls: Next Pattern button (advances all), individual player volumes
 - Within each pattern, players still independently decide:
@@ -17,6 +19,7 @@
   - Dynamic following
 
 ### 3. MANUAL MODE
+
 - User controls each player's pattern advancement individually
 - User controls: 8 separate "Next Pattern" buttons/keys
 - Automated behaviors to ease burden:
@@ -30,6 +33,7 @@
 ## Pulse Configuration
 
 ### The Pulse (Optional 9th Voice)
+
 ```
 Configuration:
   enabled: boolean (user toggle)
@@ -51,6 +55,7 @@ Behavior:
 ## Core Constants & Parameters
 
 ### Tempo & Duration
+
 - **Tempo Range**: 69-132 BPM (quarter note)
 - **Common Range**: 96-120 BPM
 - **Target Duration**: 45-90 minutes total
@@ -58,10 +63,11 @@ Behavior:
 - **Duration Formula**: At ~1 minute per pattern × 53 patterns ≈ 53 minutes
 
 ### Pattern Data
+
 - **Total Patterns**: 53
 - **Pattern Lengths**: 1 to 64 eighth notes (Pattern 35 is longest at 60 pulses)
 - **Total Written Material**: 521 eighth notes
-- **Recurring Patterns**: 
+- **Recurring Patterns**:
   - Pattern 10 = Pattern 41
   - Pattern 11 = Pattern 36  
   - Pattern 18 = Pattern 28
@@ -69,6 +75,7 @@ Behavior:
 ## Player Agent Rules
 
 ### Pattern Navigation
+
 ```
 HARD RULE: Maximum separation = 3 patterns
 - Can play: current_pattern, current_pattern-1, current_pattern-2
@@ -79,6 +86,7 @@ HARD RULE: Maximum separation = 3 patterns
 ```
 
 ### Pattern Repetition Logic
+
 ```
 For each pattern:
   min_repetitions = tempo_dependent_minimum (ensure 45 sec minimum)
@@ -92,6 +100,7 @@ For each pattern:
 ```
 
 ### Entry Protocol
+
 ```
 Start:
   - Optional pulse begins (if enabled)
@@ -101,6 +110,7 @@ Start:
 ```
 
 ### Exit Protocol
+
 ```
 When reaching Pattern 53:
   1. Stay on Pattern 53 until all players arrive
@@ -111,6 +121,7 @@ When reaching Pattern 53:
 ```
 
 ### Rest Behavior
+
 ```
 rest_probability = 0.1-0.2 per pattern transition
 rest_duration = random(1, 3) patterns
@@ -122,6 +133,7 @@ if active_players < minimum_threshold:
 ## Ensemble Coordination
 
 ### Pattern Alignment Detection
+
 ```
 Check every N seconds:
   if 60% of players on same pattern:
@@ -132,6 +144,7 @@ Check every N seconds:
 ```
 
 ### Dynamic Following
+
 ```
 sample ensemble_average_volume every second
 if trend detected over 3 seconds:
@@ -141,6 +154,7 @@ if trend detected over 3 seconds:
 ```
 
 ### Octave Displacement
+
 ```
 For each pattern entry:
   base_octave = instrument_natural_range
@@ -159,6 +173,7 @@ For each pattern entry:
 ## Time Management
 
 ### Pattern Duration Normalization
+
 ```
 // Prevent long patterns from dominating timeline
 base_duration = random(45, 90) seconds
@@ -169,6 +184,7 @@ final_duration = max(normalized_duration, 30 seconds)
 ```
 
 ### Global Pacing
+
 ```
 ensemble_progress_rate = current_median_pattern / elapsed_time
 if progress_rate < target_rate:
@@ -180,6 +196,7 @@ if progress_rate > target_rate:
 ## Implementation Architecture
 
 ### Player Agent State
+
 ```javascript
 class Player {
   currentPattern: 1-53
@@ -195,6 +212,7 @@ class Player {
 ```
 
 ### Ensemble Manager
+
 ```javascript
 class Ensemble {
   mode: 'autonomous' | 'semi-autonomous' | 'manual'
@@ -211,6 +229,7 @@ class Ensemble {
 ```
 
 ### Pulse Agent
+
 ```javascript
 class Pulse {
   enabled: boolean
@@ -225,6 +244,7 @@ class Pulse {
 ### Decision Points (per player per beat)
 
 #### AUTONOMOUS MODE
+
 1. **Should I advance?** Check repetitions complete
 2. **Should I rest?** Check rest probability and ensemble density
 3. **Should I return?** If resting, check if behind ensemble
@@ -233,6 +253,7 @@ class Pulse {
 6. **Should I adjust dynamics?** Every second, check ensemble trend
 
 #### SEMI-AUTONOMOUS MODE  
+
 1. **Should I keep repeating?** Until user signals next
 2. **Should I rest?** Yes, but return to current user-set pattern
 3. **Should I change octave?** On pattern entry after user advance
@@ -240,6 +261,7 @@ class Pulse {
 5. **Am I ready indicator?** Show visual after min repetitions reached
 
 #### MANUAL MODE
+
 1. **Should I auto-advance?** Only if >3 patterns behind median (safety)
 2. **Should I warn user?** If approaching 3 pattern spread
 3. **Show ready indicator?** After 45-90 seconds in pattern
@@ -249,6 +271,7 @@ class Pulse {
 ## Mode-Specific User Interface
 
 ### AUTONOMOUS MODE Controls
+
 ```
 - Start/Stop button
 - Tempo slider (69-132 BPM)
@@ -258,6 +281,7 @@ class Pulse {
 ```
 
 ### SEMI-AUTONOMOUS MODE Controls
+
 ```
 - Next Pattern button (advances all players)
 - Individual player volume sliders (8)
@@ -269,6 +293,7 @@ class Pulse {
 ```
 
 ### MANUAL MODE Controls
+
 ```
 - 8 Next Pattern buttons (keyboard: 1-8 keys)
 - Pattern jump shortcuts (shift+1-8: jump to median)
@@ -284,12 +309,14 @@ class Pulse {
 ## Special Behavioral Rules
 
 ### Convergence Events
+
 - **Frequency**: 1-2 times per performance
 - **Trigger**: When >60% players naturally align
 - **Duration**: 15-30 seconds of synchronized playing
 - **Exit**: Staggered, maintaining 2-3 pattern spread
 
 ### Listening Simulation
+
 ```
 Each player maintains awareness of:
   - 2-3 nearest neighbors (for local interactions)
@@ -299,6 +326,7 @@ Each player maintains awareness of:
 ```
 
 ### Human Imperfection
+
 ```
 timing_offset = gaussian(0, 30ms)
 volume_fluctuation = ±5% random walk
@@ -319,6 +347,7 @@ occasional_skip = 2% chance to skip a pattern entirely
 ## Minimum Viable Implementation
 
 ### AUTONOMOUS MODE
+
 ```python
 # Core loop per player per pattern
 while current_pattern <= 53:
@@ -343,6 +372,7 @@ while current_pattern <= 53:
 ```
 
 ### SEMI-AUTONOMOUS MODE
+
 ```python
 # Core loop per player
 while current_pattern <= 53:
@@ -370,6 +400,7 @@ while current_pattern <= 53:
 ```
 
 ### MANUAL MODE
+
 ```python
 # Core loop per player
 while current_pattern <= 53:
@@ -403,6 +434,7 @@ while current_pattern <= 53:
 ```
 
 ## Pulse Implementation (All Modes)
+
 ```python
 class PulseVoice:
     def __init__(self, audio_engine):
@@ -437,6 +469,7 @@ class PulseVoice:
 ## Mode-Specific Burden Reduction
 
 ### MANUAL MODE Assists
+
 To make manual control manageable for 8 players:
 
 1. **Visual Clustering**: Group players by current pattern visually
@@ -452,6 +485,7 @@ To make manual control manageable for 8 players:
    - C: Trigger convergence mode for selected
 
 ### SEMI-AUTONOMOUS MODE Assists
+
 1. **Ready Consensus**: Show percentage of players ready
 2. **Pattern Duration Timer**: Visual countdown/progress bar
 3. **Auto-Advance Option**: After all players signal ready
@@ -459,6 +493,7 @@ To make manual control manageable for 8 players:
 5. **Optimal Timing Hints**: Subtle pulse when good to advance
 
 ### Visual Feedback (All Modes)
+
 ```
 Pattern Map: [●●●●●○○○----------] (players 1-5 on pattern 6, 6-8 on 7)
 Spread: OK | WARNING | CRITICAL
@@ -470,6 +505,7 @@ Current Median: Pattern 24
 ## Emergence Goals
 
 The implementation should produce:
+
 - Unpredictable but coherent texture evolution
 - Natural crescendos and diminuendos
 - Occasional magical alignments
