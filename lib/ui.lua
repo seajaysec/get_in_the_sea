@@ -124,7 +124,7 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
     end
     screen.level(15)
     if ensemble and ensemble.ending then
-      screen.move(0, 64)
+      screen.move(0, 62)
       screen.level(15)
       screen.text("Ending...")
     end
