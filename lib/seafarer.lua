@@ -165,9 +165,6 @@ function Seafarer:all_notes_off()
     if (self.output == 1 or self.output == 3) and engine.name == "MxSamples" then
       skeys:off({ name = self.mx_instrument, midi = a })
     end
-    if (self.output == 1 or self.output == 3) and engine.name == "MxSynths" and params:get("mxsynths_voice_id") == self.id then
-      engine.mx_note_off(a)
-    end
   end
   self.active_notes = {}
 end
@@ -197,23 +194,6 @@ function Seafarer:step()
             if ae == "MxSamples" then
               skeys:on({ name = self.mx_instrument, midi = note_num, velocity = velocity })
               table.insert(self.active_notes, note_num)
-            elseif ae == "MxSynths" then
-              if params:get("mxsynths_voice_id") == self.id then
-                local amp = math.min(1.0, math.max(0.1, (velocity or 100) / 100))
-                local tempo = clock.get_tempo()
-                local beat_len
-                if event.is_grace then
-                  beat_len = params:get("grace_len_beats") or 0.0625
-                else
-                  local dur = event.duration or 0
-                  dur = dur - (self.carry_beat_adjustment or 0)
-                  if dur < 0 then dur = 0 end
-                  beat_len = dur
-                end
-                local duration_sec = (beat_len > 0) and (beat_len * 60 / tempo) or 0.05
-                engine.mx_note_on(note_num, amp, duration_sec)
-                table.insert(self.active_notes, note_num)
-              end
             else
               engine.hz(freq)
             end
