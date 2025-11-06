@@ -205,6 +205,22 @@ function Seafarer:get_param(idx)
   return params:get(self.id .. "_" .. idx)
 end
 
+function Seafarer:begin_advance_cooldown(n)
+  self.advance_cooldown_loops_remaining = math.max(0, n or 0)
+end
+
+function Seafarer:can_user_advance()
+  local cd = self.advance_cooldown_loops_remaining or 0
+  local ph = self.phrase or 1
+  return cd <= 0 and ph < #phrases
+end
+
+function Seafarer:advance_one_by_user()
+  self.phrase = math.min(#phrases, (self.phrase or 1) + 1)
+  self.phrase_note = 1
+  self:begin_advance_cooldown(4)
+end
+
 function Seafarer:reset()
   self.phrase = 1
   self.phrase_note = 1
