@@ -11,6 +11,8 @@ local Seafarer = include("lib/seafarer")
 local EngineSetup = include("lib/engine_setup")
 -- External module: global script parameters (max drift, repeat probability, grace length)
 local GlobalParams = include("lib/global_params")
+-- Ensemble manager: modes, tempo, pulse, coordination
+local Ensemble = include("lib/ensemble")
 -- External module: MIDI transport handler (start/stop/continue)
 local Midi = include("lib/midi")
 -- External module: UI drawing for screen
@@ -24,6 +26,7 @@ local draw_metro = metro.init()
 
 local seafarers = {}
 local any_playing = false
+local ensemble = nil
 
 function init()
   -- instantiate seafarers
@@ -44,6 +47,10 @@ function init()
 
   -- External: global script parameters
   GlobalParams.setup()
+
+  -- Ensemble params and state
+  ensemble = Ensemble:new(seafarers)
+  ensemble:setup_params()
 
   -- ORCA-style sections (no menu diving)
   -- OUTPUT
@@ -84,13 +91,14 @@ end
 
 function key(n, z)
   if z == 1 then
-    for s = 1, #seafarers do
-      if n == 2 then
-        seafarers[s].playing = not seafarers[s].playing
-        seafarers[s]:all_notes_off()
-      elseif n == 3 then
-        seafarers[s]:reset()
+    if n == 2 then
+      if any_playing then
+        ensemble:stop_all()
+      else
+        ensemble:start_all()
       end
+    elseif n == 3 then
+      ensemble:reset_all()
     end
   end
 end
@@ -98,26 +106,18 @@ end
 function update()
   local all_end = true
   any_playing = false
-  local min_phrase = 999
   for s = 1, #seafarers do
-    -- check if all players have reached the end (probably shouldn't be here)
-    if seafarers[s].phrase ~= #phrases then
-      all_end = false
-    end
-    -- check if all players are playing
-    if seafarers[s].playing then
-      any_playing = true
-    end
-    -- get the lowest phrase to stop seafarers racing ahead
-    if seafarers[s].phrase < min_phrase then
-      min_phrase = seafarers[s].phrase
-    end
+    if seafarers[s].phrase ~= #phrases then all_end = false end
+    if seafarers[s].playing then any_playing = true end
   end
 
-  -- let all seafarers know what the others are up to
-  for s = 1, #seafarers do
-    seafarers[s].all_at_end = all_end
-    seafarers[s].max_phrase = min_phrase + params:get("max_drift")
+  if ensemble ~= nil then
+    ensemble:update_median()
+    for s = 1, #seafarers do
+      seafarers[s].all_at_end = all_end
+      seafarers[s].allowed_min_phrase = seafarers[s].allowed_min_phrase or 1
+      seafarers[s].allowed_max_phrase = seafarers[s].allowed_max_phrase or (#phrases)
+    end
   end
 
   redraw()
@@ -125,7 +125,7 @@ end
 
 function redraw()
   -- External: delegate screen drawing to UI module
-  UI.draw(seafarers, any_playing)
+  UI.draw(seafarers, any_playing, ensemble)
 end
 
 function cleanup()
