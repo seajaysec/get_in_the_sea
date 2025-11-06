@@ -22,13 +22,26 @@ function UI.draw(seafarers, any_playing, ensemble)
     screen.text("Median: " .. tostring(ensemble.median_pattern or 1))
     screen.move(120, 32)
     screen.text_right("Pulse " .. ((ensemble.pulse_enabled and "on") or "off"))
+    if ensemble.ending then
+      screen.move(0, 52)
+      screen.text("Ending...")
+    end
   end
 
   local x = 0
   local y = 24
   for s = 1, #seafarers do
+    local is_selected = (ensemble ~= nil and ensemble.selected_player == s)
+    local num = string.format("%02d", seafarers[s].phrase)
+    if seafarers[s].ready_indicator then num = num .. "*" end
+    if is_selected then
+      num = "[" .. num .. "]"
+      screen.level(15)
+    else
+      screen.level(10)
+    end
     screen.move(x, y)
-    screen.text(string.format("%02d", seafarers[s].phrase))
+    screen.text(num)
 
     x = x + 30
     if s == 4 then
@@ -36,6 +49,7 @@ function UI.draw(seafarers, any_playing, ensemble)
       x = 0
     end
   end
+  screen.level(15)
 
   screen.font_size(8)
   screen.move(0, 60)
