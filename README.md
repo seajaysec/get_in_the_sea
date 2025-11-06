@@ -40,8 +40,8 @@
 ## On-screen UI
 
 - Header: Mode, Tempo, Median pattern, Pulse on/off; “Ending…” appears during ending protocol
-- Players: two rows of four (1–4, 5–8)
-  - Selected player shown in brackets, e.g., [06]
+- Seafarers: two rows of four (1–4, 5–8)
+  - Selected seafarer shown in brackets, e.g., [06]
   - Ready indicator after sufficient time in pattern: trailing “*”, e.g., 06*
 
 ## Modes
@@ -77,7 +77,7 @@
 - advance delay (ms): 0–500, extra hold after finishing a pattern
 - skip pattern %: 0–5, rare skip at boundary
 
-### SEAFARER (per-player)
+### SEAFARER (per-seafarer)
 
 - output: audio | midi | audio + midi | crow out 1+2 | crow ii JF
 - octave: -3..+3
@@ -111,7 +111,6 @@
 ## Notes
 
 - MxSamples may log missing folder warnings if sample packs are not installed; this is non-fatal
-- Legacy params (max phrase drift, repeat probability) are retained for compatibility but not used by the new agent logic
 
 ## Credits
 
