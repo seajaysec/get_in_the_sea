@@ -2,7 +2,7 @@
 
 local UI = {}
 
-function UI.draw(seafarers, any_playing, ensemble)
+function UI.draw(seafarers, any_playing, ensemble, ui_focus, header_index)
   screen.clear()
   screen.font_face(12)
   screen.font_size(12)
@@ -14,16 +14,31 @@ function UI.draw(seafarers, any_playing, ensemble)
   screen.font_size(8)
 
   if ensemble ~= nil then
-    screen.move(0, 10)
-    screen.text("Mode: " .. (ensemble:get_mode() or "autonomous"))
-    screen.move(120, 10)
-    screen.text_right(string.format("%dbpm", math.floor(ensemble.tempo_bpm or clock.get_tempo() or 120)))
-    screen.move(0, 20)
-    screen.text("Median: " .. tostring(ensemble.median_pattern or 1))
-    screen.move(120, 20)
-    screen.text_right("Pulse " .. ((ensemble.pulse_enabled and "on") or "off"))
+    -- header selection
+    local sel = header_index or 1
+    local focus_header = (ui_focus == "header")
+
+    local mode_str = (ensemble:get_mode() or "autonomous")
+    local tempo_str = string.format("%dbpm", math.floor(ensemble.tempo_bpm or clock.get_tempo() or 120))
+    local pulse_str = (ensemble.pulse_enabled and "on") or "off"
+    local median_str = tostring(ensemble.median_pattern or 1)
+
+    local function draw_field(x, y, idx, label, value)
+      screen.move(x, y)
+      if focus_header and sel == idx then screen.level(15) else screen.level(10) end
+      local text = label .. ": " .. value
+      if focus_header and sel == idx then text = "[" .. text .. "]" end
+      screen.text(text)
+    end
+
+    draw_field(0, 10, 1, "Mode", mode_str)
+    draw_field(70, 10, 2, "Pulse", pulse_str)
+    draw_field(0, 20, 3, "Tempo", tempo_str)
+    draw_field(70, 20, 4, "Median", median_str)
+
     if ensemble.ending then
       screen.move(0, 30)
+      screen.level(15)
       screen.text("Ending...")
     end
   end
