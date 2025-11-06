@@ -13,13 +13,37 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
   -- No menubar; pages are implied and full-screen
 
   -- content area
+  local function draw_page_title(title)
+    screen.font_size(10)
+    screen.move(0, 12)
+    screen.level(12)
+    screen.text(title)
+  end
+
+  local function draw_list(items, selected_index, start_y, line_h, capacity)
+    local n = #items
+    if n == 0 then return end
+    local cap = math.max(1, capacity or 4)
+    local start_idx = 1
+    if n > cap then
+      start_idx = math.min(math.max(1, selected_index - (cap - 1)), math.max(1, n - (cap - 1)))
+    end
+    local y = start_y
+    for i = start_idx, math.min(n, start_idx + cap - 1) do
+      local it = items[i]
+      screen.move(0, y)
+      screen.level(i == selected_index and 15 or 10)
+      local txt = it
+      if i == selected_index then txt = "[" .. txt .. "]" end
+      screen.text(txt)
+      y = y + line_h
+    end
+  end
+
   local function draw_info_status()
     if ensemble == nil then return end
     -- Info: Status page (existing metrics), spaced for readability
-    screen.font_size(10)
-    screen.move(0, 14)
-    screen.level(15)
-    screen.text("Info")
+    draw_page_title("Info")
 
     local median = ensemble.median_pattern or 1
     local min_p = 999
@@ -49,17 +73,17 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
     local total = math.max(1, #phrases)
     local pct = math.floor((median / total) * 100)
 
-    screen.move(0, 28)
+    screen.move(0, 26)
     screen.level(12)
     screen.text(string.format("Time %s  Complete %d%%", time_str, pct))
 
-    screen.move(0, 40)
+    screen.move(0, 38)
     screen.text(string.format("Median %d  Spread %d", median, spread))
 
-    screen.move(0, 52)
+    screen.move(0, 50)
     screen.text(string.format("Active %d  Resting %d  Ready %d", active, resting, ready))
 
-    screen.move(0, 64)
+    screen.move(0, 62)
     screen.level(10)
     screen.text(string.format("At53 %d  Ending %s", at53, ensemble.ending and "on" or "off"))
 
@@ -67,10 +91,11 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
   end
 
   local function draw_seafarers_page()
+    draw_page_title("Seafarers")
     -- players grid
     screen.font_size(10)
     local x = 0
-    local y = 36
+    local y = 30
     for s = 1, #seafarers do
       local is_selected = (ensemble ~= nil and ensemble.selected_player == s)
       local num = string.format("%02d", seafarers[s].phrase)
@@ -97,7 +122,7 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
     end
     screen.level(15)
     if ensemble and ensemble.ending then
-      screen.move(0, 64)
+      screen.move(0, 62)
       screen.level(15)
       screen.text("Ending...")
     end
@@ -105,22 +130,20 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
 
   local function draw_ensemble_page()
     if ensemble == nil then return end
+    draw_page_title("Ensemble")
     local items = {
       { label = "Mode", value = (ensemble:get_mode() or "autonomous") },
       { label = "Pulse", value = (ensemble.pulse_enabled and "on" or "off") },
       { label = "Tempo", value = string.format("%dbpm", math.floor(ensemble.tempo_bpm or clock.get_tempo() or 120)) },
     }
     screen.font_size(10)
-    for i, it in ipairs(items) do
-      screen.move(0, 16 + i * 14)
-      screen.level(i == ui_element_index and 15 or 10)
-      local txt = it.label .. ": " .. it.value
-      if i == ui_element_index then txt = "[" .. txt .. "]" end
-      screen.text(txt)
-    end
+    local rows = {}
+    for _, it in ipairs(items) do table.insert(rows, it.label .. ": " .. it.value) end
+    draw_list(rows, ui_element_index, 26, 12, 4)
   end
 
   local function draw_human_page()
+    draw_page_title("Humanize")
     screen.font_size(10)
     local items = {
       { label = "Timing ms", value = params:get("human_timing_ms") },
@@ -128,26 +151,19 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
       { label = "Adv delay ms", value = params:get("human_adv_ms") },
       { label = "Skip %", value = params:get("human_skip_pct") },
     }
-    for i, it in ipairs(items) do
-      screen.move(0, 16 + i * 14)
-      screen.level(i == ui_element_index and 15 or 10)
-      local txt = string.format("%s: %s", it.label, tostring(it.value))
-      if i == ui_element_index then txt = "[" .. txt .. "]" end
-      screen.text(txt)
-    end
+    local rows = {}
+    for _, it in ipairs(items) do table.insert(rows, string.format("%s: %s", it.label, tostring(it.value))) end
+    draw_list(rows, ui_element_index, 26, 12, 4)
   end
 
   local function draw_engine_page()
     screen.font_size(10)
     local ae = engine.name or "?"
+    draw_page_title("Engine")
     local sel = (ensemble and ensemble.selected_player) or 1
-    -- Header (non-editable)
-    screen.move(0, 14)
-    screen.level(12)
-    screen.text("Engine: " .. ae)
     -- Editable rows begin after header
     local rows = {}
-    -- Row 1: Activate engine selector (interactive)
+    -- Row 1: Activate engine selector (interactive); show current engine
     table.insert(rows, { label = "Activate", value = ae, kind = "engine_select" })
     local ael = string.lower(ae or "")
     if ael == "mxsamples" then
@@ -171,61 +187,49 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
     else
       -- FM7 or unknown: no additional params
     end
-    for i, it in ipairs(rows) do
-      screen.move(0, 28 + i * 14)
-      screen.level(i == ui_element_index and 15 or 10)
+    local text_rows = {}
+    for _, it in ipairs(rows) do
       local val = (type(it.value) == "number") and util.round(it.value, 0.01) or tostring(it.value)
-      local txt = string.format("%s: %s", it.label, val)
-      if i == ui_element_index then txt = "[" .. txt .. "]" end
-      screen.text(txt)
+      table.insert(text_rows, string.format("%s: %s", it.label, val))
     end
+    draw_list(text_rows, ui_element_index, 26, 12, 4)
   end
 
   local function draw_output_page()
     screen.font_size(10)
+    draw_page_title("Output & MIDI")
     local sel = (ensemble and ensemble.selected_player) or 1
-    -- Header (non-editable)
-    screen.move(0, 14)
-    screen.level(12)
-    screen.text("Seafarer S" .. sel)
+    -- Subheader with selected seafarer
+    screen.move(0, 20)
+    screen.level(10)
+    screen.text("S" .. sel)
     local out_idx = params:get(sel .. "_output") or 1
     local out_name = (options and options.OUTPUT and options.OUTPUT[out_idx]) and options.OUTPUT[out_idx] or tostring(out_idx)
     local dev = params:get(sel .. "midi_out_device") or 1
     local dev_name = (midi and midi.vports and midi.vports[dev] and midi.vports[dev].name) or ("dev " .. dev)
     local ch = params:get(sel .. "_midi_out_channel") or 1
-    local items = {
-      { label = "Output", value = out_name },
-      { label = "MIDI dev", value = dev_name },
-      { label = "MIDI ch", value = ch },
+    local rows = {
+      string.format("Output: %s", out_name),
+      string.format("MIDI dev: %s", dev_name),
+      string.format("MIDI ch: %s", tostring(ch)),
     }
-    for i, it in ipairs(items) do
-      screen.move(0, 28 + i * 14)
-      screen.level(i == ui_element_index and 15 or 10)
-      local txt = string.format("%s: %s", it.label, tostring(it.value))
-      if i == ui_element_index then txt = "[" .. txt .. "]" end
-      screen.text(txt)
-    end
+    draw_list(rows, ui_element_index, 28, 12, 4)
   end
 
   local function draw_random_page()
     screen.font_size(10)
+    draw_page_title("Randomize")
     local function onoff(id)
       local v = params:get(id) or 1
       return (v == 2) and "on" or "off"
     end
-    local items = {
-      { label = "Instruments", value = onoff("rand_instruments") },
-      { label = "Engine params", value = onoff("rand_engine_params") },
-      { label = "Humanization", value = onoff("rand_humanization") },
-      { label = "Octaves", value = onoff("rand_octaves") },
+    local rows = {
+      string.format("Instruments: %s", onoff("rand_instruments")),
+      string.format("Engine params: %s", onoff("rand_engine_params")),
+      string.format("Humanization: %s", onoff("rand_humanization")),
+      string.format("Octaves: %s", onoff("rand_octaves")),
     }
-    for i, it in ipairs(items) do
-      screen.move(0, 16 + i * 14)
-      screen.level(i == ui_element_index and 15 or 10)
-      local txt = string.format("%s: %s", it.label, tostring(it.value))
-      if i == ui_element_index then txt = "[" .. txt .. "]" end
-      screen.text(txt)
-    end
+    draw_list(rows, ui_element_index, 26, 12, 4)
   end
 
   -- dispatch per page
