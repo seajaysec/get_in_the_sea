@@ -147,6 +147,8 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
     screen.text("Engine: " .. ae)
     -- Editable rows begin after header
     local rows = {}
+    -- Row 1: Activate engine selector (interactive)
+    table.insert(rows, { label = "Activate", value = ae, kind = "engine_select" })
     local ael = string.lower(ae or "")
     if ael == "mxsamples" then
       if mxsamples_instruments ~= nil and #mxsamples_instruments > 0 then
