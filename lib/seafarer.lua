@@ -67,6 +67,23 @@ options = {
 Seafarer = {}
 Seafarer.__index = Seafarer
 
+local function total_pattern_beats(idx)
+  local seq = phrases[idx] or {}
+  local sum = 0
+  for _, ev in ipairs(seq) do
+    local d = ev.duration or 0
+    sum = sum + d
+  end
+  return sum
+end
+
+local AVG_PATTERN_BEATS = (function()
+  local s = 0
+  for i = 1, #phrases do s = s + total_pattern_beats(i) end
+  if #phrases == 0 then return 1 end
+  return s / #phrases
+end)()
+
 function Seafarer:new(id)
   local o = {
     id = id,
@@ -76,6 +93,8 @@ function Seafarer:new(id)
     phrase_note = 1,
     all_at_end = false,
     max_phrase = 3,
+    allowed_min_phrase = 1,
+    allowed_max_phrase = #phrases,
 
     output = 0,
     midi_out_device = midi.connect(1),
@@ -85,6 +104,16 @@ function Seafarer:new(id)
     active_notes = {},
     carry_beat_adjustment = 0,
     octave = 0,
+
+    -- Agent state
+    repetitions_remaining = 0,
+    is_resting = false,
+    rest_patterns_remaining = 0,
+    displaced_octave = 0,
+    time_in_phrase_sec = 0,
+    ready_indicator = false,
+    auto_advance_warning = false,
+    ensembleRef = nil,
   }
 
   setmetatable(o, Seafarer)
@@ -92,6 +121,10 @@ function Seafarer:new(id)
   clock.run(Seafarer.step, o)
 
   return o
+end
+
+function Seafarer:set_ensemble(ensemble)
+  self.ensembleRef = ensemble
 end
 
 function Seafarer:add_output_param()
@@ -159,6 +192,12 @@ function Seafarer:reset()
   self.phrase = 1
   self.phrase_note = 1
   self:all_notes_off()
+  self.repetitions_remaining = 0
+  self.is_resting = false
+  self.rest_patterns_remaining = 0
+  self.displaced_octave = 0
+  self.time_in_phrase_sec = 0
+  self.ready_indicator = false
 end
 
 function Seafarer:all_notes_off()
@@ -188,13 +227,78 @@ function Seafarer:step()
       if waitCount <= 0 then
         self:all_notes_off()
 
+        -- enforce separation relative to ensemble median
+        if self.ensembleRef ~= nil then
+          local med = self.ensembleRef.median_pattern or 1
+          if self.phrase > (self.allowed_max_phrase or (med + 3)) then
+            -- too far ahead: wait/rest on current phrase without advancing
+            -- simply idle for a 16th note
+            waitCount = 1
+            clock.sync(BASE_STEP)
+            goto continue
+          elseif self.phrase < (self.allowed_min_phrase or math.max(1, med - 2)) then
+            -- too far behind: jump forward toward median
+            self.phrase = math.max(1, med - 1)
+            self.phrase_note = 1
+            self.repetitions_remaining = 0
+          end
+        end
+
+        -- initialize repetitions upon entering/starting phrase
+        if self.repetitions_remaining <= 0 and not self.is_resting then
+          -- octave displacement on phrase entry
+          local disp_pct = params:get("octave_disp_pct") or 30
+          if math.random(100) <= disp_pct then
+            -- weighted up:0.7, down:0.3
+            local dir = (math.random() < 0.7) and 1 or -1
+            self.displaced_octave = dir -- 1 or -1
+          else
+            self.displaced_octave = 0
+          end
+
+          -- calculate repetitions from tempo and phrase length
+          local tempo = params:get("ensemble_tempo") or clock.get_tempo()
+          local pattern_beats = total_pattern_beats(self.phrase)
+          local avg_beats = AVG_PATTERN_BEATS
+          local base_duration = util.linlin(69, 132, 60, 45, tempo) -- slower -> longer base
+          local normalized = base_duration * (avg_beats / math.max(0.25, pattern_beats))
+          local min_s = math.max(30, normalized * 0.75)
+          local max_s = normalized * 1.5
+          local one_rep_s = (pattern_beats * 60) / math.max(1, tempo)
+          local min_reps = math.max(1, math.floor(min_s / math.max(0.25, one_rep_s)))
+          local max_reps = math.max(min_reps, math.ceil(max_s / math.max(0.25, one_rep_s)))
+
+          -- bias toward middle
+          local mid = math.floor((min_reps + max_reps) / 2)
+          local r = math.random(min_reps, max_reps)
+          self.repetitions_remaining = util.round(util.linlin(min_reps, max_reps, mid, r, r), 1)
+          if self.repetitions_remaining < 1 then self.repetitions_remaining = 1 end
+          self.ready_indicator = false
+          self.time_in_phrase_sec = 0
+        end
+
+        -- handle resting between phrases
+        if self.is_resting then
+          if self.rest_patterns_remaining > 0 then
+            -- idle for one phrase length equivalent time
+            local tempo = params:get("ensemble_tempo") or clock.get_tempo()
+            local pattern_beats = total_pattern_beats(self.phrase)
+            local rest_steps = math.max(1, math.floor(((pattern_beats * 60) / tempo) / (BASE_STEP * clock.get_beat_sec())))
+            waitCount = rest_steps
+            self.rest_patterns_remaining = self.rest_patterns_remaining - 1
+            goto continue
+          else
+            self.is_resting = false
+          end
+        end
+
         -- get current event in the phrase
         local event = phrases[self.phrase][self.phrase_note]
         if event == nil then event = { duration = 0 } end
 
         -- play the event if it's a note
         if event.midi ~= nil then
-          local note_num = event.midi + ((self.octave or 0) * 12)
+          local note_num = event.midi + (((self.octave or 0) + (self.displaced_octave or 0)) * 12)
           local velocity = event.velocity or 100
           local freq = MusicUtil.note_num_to_freq(note_num)
 
@@ -262,18 +366,49 @@ function Seafarer:step()
         self.phrase_note = self.phrase_note + 1
         if self.phrase_note > #phrases[self.phrase] then
           self.phrase_note = 1
+          self.repetitions_remaining = math.max(0, (self.repetitions_remaining or 1) - 1)
 
-          local rnd = math.random(10)
-          local prob = params:get("repeat_probability")
-          if rnd > prob and self.phrase < self.max_phrase then
-            self.phrase = self.phrase + 1
-            if self.phrase > #phrases then
-              self.phrase = #phrases
+          -- ready indicator after minimum time (approx 45s)
+          if self.time_in_phrase_sec >= 45 and not self.ready_indicator then
+            self.ready_indicator = true
+          end
 
-              -- if all players are at the end we can stop
-              if self.all_at_end then
-                self.playing = false
-                self:all_notes_off()
+          -- semi-autonomous: wait for user advance
+          if self.ensembleRef ~= nil and self.ensembleRef:get_mode() == "semi-autonomous" then
+            if self.ensembleRef.user_pattern_target ~= nil and self.ensembleRef.user_pattern_target > self.phrase then
+              self.phrase = math.min(#phrases, self.ensembleRef.user_pattern_target)
+              self.repetitions_remaining = 0
+              self.ready_indicator = false
+            end
+          else
+            -- autonomous / manual default advancement
+            if self.repetitions_remaining <= 0 and self.phrase < #phrases then
+              -- rest behavior at transitions
+              local active_players = 0
+              if self.ensembleRef ~= nil then
+                for _, s in ipairs(self.ensembleRef.players) do if s.playing and not s.is_resting then active_players = active_players + 1 end end
+              end
+              local min_active = (self.ensembleRef and self.ensembleRef.min_active_players) or 3
+              local rest_pct = (self.ensembleRef and self.ensembleRef.rest_probability_pct) or 15
+              local should_rest = (math.random(100) <= rest_pct) and (active_players > min_active)
+
+              if should_rest then
+                self.is_resting = true
+                self.rest_patterns_remaining = math.random(1, 3)
+              end
+
+              -- advance one pattern respecting allowed max
+              if self.phrase + 1 <= (self.allowed_max_phrase or #phrases) then
+                self.phrase = self.phrase + 1
+              end
+
+              -- pattern 53 handling
+              if self.phrase >= #phrases then
+                self.phrase = #phrases
+                if self.all_at_end then
+                  self.playing = false
+                  self:all_notes_off()
+                end
               end
             end
           end
@@ -296,12 +431,14 @@ function Seafarer:step()
 
         local steps = math.floor((beat_len / BASE_STEP) + 0.0001)
         waitCount = math.max(0, steps - 1)
+        self.time_in_phrase_sec = self.time_in_phrase_sec + (beat_len * 60) / math.max(1, clock.get_tempo())
       else
         waitCount = waitCount - 1
       end
     end
 
     clock.sync(BASE_STEP)
+    ::continue::
   end
 end
 
