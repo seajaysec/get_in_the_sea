@@ -10,25 +10,28 @@ function UI.draw(seafarers, any_playing, ensemble)
 
   -- title removed to declutter
 
-  screen.font_size(10)
+  -- header
+  screen.font_size(8)
 
   if ensemble ~= nil then
-    screen.move(0, 20)
+    screen.move(0, 10)
     screen.text("Mode: " .. (ensemble:get_mode() or "autonomous"))
-    screen.move(120, 20)
+    screen.move(120, 10)
     screen.text_right(string.format("%dbpm", math.floor(ensemble.tempo_bpm or clock.get_tempo() or 120)))
-    screen.move(0, 32)
+    screen.move(0, 20)
     screen.text("Median: " .. tostring(ensemble.median_pattern or 1))
-    screen.move(120, 32)
+    screen.move(120, 20)
     screen.text_right("Pulse " .. ((ensemble.pulse_enabled and "on") or "off"))
     if ensemble.ending then
-      screen.move(0, 52)
+      screen.move(0, 30)
       screen.text("Ending...")
     end
   end
 
+  -- players grid
+  screen.font_size(10)
   local x = 0
-  local y = 24
+  local y = 36
   for s = 1, #seafarers do
     local is_selected = (ensemble ~= nil and ensemble.selected_player == s)
     local num = string.format("%02d", seafarers[s].phrase)
@@ -44,7 +47,7 @@ function UI.draw(seafarers, any_playing, ensemble)
 
     x = x + 30
     if s == 4 then
-      y = 44
+      y = 54
       x = 0
     end
   end
