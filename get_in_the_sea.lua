@@ -61,8 +61,6 @@ end
 
 local function engine_elements_for_active_engine(selected_id)
   local elements = {}
-  -- 1: engine select always present
-  table.insert(elements, { type = "engine_select" })
   local ae = string.lower(engine.name or "")
   if ae == "mxsamples" then
     -- per-seafarer instrument selector if available
@@ -229,27 +227,7 @@ function enc(n, d)
       local els = engine_elements_for_active_engine(sel)
       local idx = math.max(1, math.min(ui_element_index, #els))
       local el = els[idx]
-      if el.type == "engine_select" then
-        -- build available engine list from engine.names if present
-        local list = engine.names or { "PolyPerc", "FM7", "Passersby", "Odashodasho", "MxSamples" }
-        -- find current
-        local cur = 1
-        local target = string.lower(engine.name or "")
-        for i, nm in ipairs(list) do
-          if string.lower(nm or "") == target then cur = i break end
-        end
-        local next_i = cur + sign(d)
-        if next_i < 1 then next_i = #list end
-        if next_i > #list then next_i = 1 end
-        local pick = list[next_i]
-        if pick ~= nil then
-          -- trigger activation param if available
-          local id = "activate_" .. string.lower(pick)
-          if params:lookup_param(id) ~= nil then
-            params:bang(id)
-          end
-        end
-      elseif el.type == "param" and el.id ~= nil then
+      if el and el.type == "param" and el.id ~= nil then
         params:delta(el.id, sign(d))
       end
     elseif page.id == "output" then
