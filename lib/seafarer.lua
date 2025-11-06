@@ -130,6 +130,7 @@ function Seafarer:new(id)
     ensembleRef = nil,
     velocity_scale = 1.0,
     human_volume_factor = 1.0,
+    advance_cooldown_loops_remaining = 0,
   }
 
   setmetatable(o, Seafarer)
@@ -173,7 +174,7 @@ end
 
 function Seafarer:add_octave_param()
   params:add { type = "number", id = self.id .. "_octave", name = "S" .. self.id .. " octave",
-    min = -3, max = 3, default = 0,
+    min = -2, max = 2, default = 0,
     action = function(value)
       self.octave = value
     end
@@ -214,6 +215,7 @@ function Seafarer:reset()
   self.displaced_octave = 0
   self.time_in_phrase_sec = 0
   self.ready_indicator = false
+  self.advance_cooldown_loops_remaining = 0
 end
 
 function Seafarer:all_notes_off()
@@ -404,6 +406,10 @@ function Seafarer:step()
         if self.phrase_note > #phrases[self.phrase] then
           self.phrase_note = 1
           self.repetitions_remaining = math.max(0, (self.repetitions_remaining or 1) - 1)
+        -- cooldown decrement on phrase boundary
+        if (self.advance_cooldown_loops_remaining or 0) > 0 then
+          self.advance_cooldown_loops_remaining = self.advance_cooldown_loops_remaining - 1
+        end
 
           -- ready indicator after minimum time (approx 45s)
           if self.time_in_phrase_sec >= 45 and not self.ready_indicator then
