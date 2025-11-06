@@ -28,6 +28,9 @@ local seafarers = {}
 local any_playing = false
 local ensemble = nil
 local k1_down = false
+local ui_focus = "header" -- 'header' or 'seafarers'
+local header_items = { "mode", "pulse", "tempo", "median" }
+local header_index = 1
 
 function init()
   -- instantiate seafarers
@@ -90,10 +93,48 @@ Midi.register_transport(m, seafarers)
 
 function enc(n, d)
   if ensemble == nil then return end
-  if n == 2 then
-    params:delta("selected_player", d)
+  if n == 1 then
+    if d > 0 then ui_focus = "seafarers" elseif d < 0 then ui_focus = "header" end
+  elseif n == 2 then
+    if ui_focus == "header" then
+      local count = #header_items
+      header_index = header_index + d
+      if header_index < 1 then header_index = 1 end
+      if header_index > count then header_index = count end
+    else
+      params:delta("selected_player", d)
+    end
   elseif n == 3 then
-    params:delta("ensemble_tempo", d)
+    if ui_focus == "header" then
+      local item = header_items[header_index]
+      if item == "mode" then
+        params:delta("ensemble_mode", d)
+      elseif item == "pulse" then
+        -- toggle on movement; support multi-step by delta
+        params:delta("pulse_enabled", d)
+      elseif item == "tempo" then
+        params:delta("ensemble_tempo", d)
+      else
+        -- median is read-only
+      end
+    else
+      -- seafarers focus: E3 advances based on mode
+      local mode = ensemble:get_mode()
+      if mode == "semi-autonomous" then
+        if d > 0 then ensemble:advance_all_target() end
+      elseif mode == "manual" then
+        if d > 0 then
+          local sel = params:get("selected_player") or 1
+          local s = seafarers[sel]
+          if s then
+            s.phrase = math.min(#phrases, s.phrase + 1)
+            s.phrase_note = 1
+          end
+        end
+      else
+        -- autonomous: no-op
+      end
+    end
   end
 end
 
@@ -108,19 +149,7 @@ function key(n, z)
         ensemble:start_all()
       end
     elseif n == 3 then
-      local mode = ensemble and ensemble:get_mode() or "autonomous"
-      if mode == "semi-autonomous" and not k1_down then
-        ensemble:advance_all_target()
-      elseif mode == "manual" and not k1_down then
-        local sel = params:get("selected_player") or 1
-        local s = seafarers[sel]
-        if s then
-          s.phrase = math.min(#phrases, s.phrase + 1)
-          s.phrase_note = 1
-        end
-      else
-        ensemble:reset_all()
-      end
+      ensemble:reset_all()
     end
   else
     if n == 1 then k1_down = false end
@@ -151,7 +180,7 @@ end
 
 function redraw()
   -- External: delegate screen drawing to UI module
-  UI.draw(seafarers, any_playing, ensemble)
+  UI.draw(seafarers, any_playing, ensemble, ui_focus, header_index)
 end
 
 function cleanup()
