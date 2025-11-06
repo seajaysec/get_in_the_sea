@@ -85,6 +85,7 @@ function Seafarer:new(id)
     active_notes = {},
     carry_beat_adjustment = 0,
     octave = 0,
+    timber_sample_id = 1,
   }
 
   setmetatable(o, Seafarer)
@@ -146,6 +147,14 @@ function Seafarer:add_midi_channel_param()
     action = function(value)
       self:all_notes_off()
       self.midi_out_channel = value
+    end }
+end
+
+function Seafarer:add_timber_sample_param()
+  params:add { type = "number", id = self.id .. "_timber_sample_id", name = "S" .. self.id .. " timber sample",
+    min = 1, max = 36, default = 1,
+    action = function(value)
+      self.timber_sample_id = value
     end }
 end
 
