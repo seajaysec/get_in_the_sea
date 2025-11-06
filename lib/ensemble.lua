@@ -52,7 +52,9 @@ function Ensemble:setup_params()
   params:add{ type = "number", id = "ensemble_tempo", name = "tempo (bpm)", min = 69, max = 132, default = math.floor(self.tempo_bpm) }
   params:set_action("ensemble_tempo", function(v)
     self.tempo_bpm = v
-    clock.tempo(v)
+    if clock.set_tempo ~= nil then
+      clock.set_tempo(v)
+    end
   end)
 
   params:add{ type = "option", id = "pulse_enabled", name = "pulse enabled", options = { "off", "on" }, default = self.pulse_enabled and 2 or 1 }
