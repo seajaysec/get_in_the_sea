@@ -113,10 +113,12 @@ function enc(n, d)
       if d < 0 and sel_before <= 1 then
         ui_focus = "header"
         -- jump to Info header item
-        for i, nme in ipairs(header_items) do if nme == "info" then
+        for i, nme in ipairs(header_items) do
+          if nme == "info" then
             header_index = i
             break
-          end end
+          end
+        end
         return
       end
       params:delta("selected_player", d)
