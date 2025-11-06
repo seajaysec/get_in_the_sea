@@ -24,18 +24,18 @@ local function polypercInit()
 end
 
 -- helper: add an Activate trigger inside an engine group
-local function add_activate_trigger(engine_to_index, id, label, engine_name)
+local function add_activate_trigger(id, label, engine_name, switch_engine)
   params:add_trigger(id, label)
   params:set_action(id, function()
-    local idx = engine_to_index and engine_to_index[engine_name]
-    if idx ~= nil then params:set("engine_index", idx) end
+    if switch_engine ~= nil then switch_engine(engine_name) end
   end)
 end
 
 -- add parameter groups per engine
-local function add_polyperc_params(engine_to_index)
-  params:add_group("PolyPerc", 7)
-  add_activate_trigger(engine_to_index, "activate_polyperc", "Activate: PolyPerc", "PolyPerc")
+local function add_polyperc_params(switch_engine)
+  params:add_group("PolyPerc", 8)
+  add_activate_trigger("activate_polyperc", "Activate: PolyPerc", "PolyPerc", switch_engine)
+  params:add_separator("PARAMETERS")
   local cs_AMP = controlspec.new(0, 1, 'lin', 0, 0.5, '')
   params:add { type = "control", id = "amp", controlspec = cs_AMP, action = function(x) if string.lower(engine.name or "") == "polyperc" then engine.amp(x) end end }
 
@@ -55,9 +55,10 @@ local function add_polyperc_params(engine_to_index)
   params:add { type = "control", id = "pan", controlspec = cs_PAN, action = function(x) if string.lower(engine.name or "") == "polyperc" then engine.pan(x) end end }
 end
 
-local function add_odashodasho_params(engine_to_index)
-  params:add_group("Odashodasho", 17)
-  add_activate_trigger(engine_to_index, "activate_odashodasho", "Activate: Odashodasho", "Odashodasho")
+local function add_odashodasho_params(switch_engine)
+  params:add_group("Odashodasho", 18)
+  add_activate_trigger("activate_odashodasho", "Activate: Odashodasho", "Odashodasho", switch_engine)
+  params:add_separator("PARAMETERS")
   params:add { type = "control", id = "odash_attack", name = "attack", controlspec = controlspec.new(0, 8, 'lin', 0.01, 0.01, 's') }
   params:add { type = "control", id = "odash_decay", name = "decay", controlspec = controlspec.new(0, 8, 'lin', 0.01, 0.5, 's') }
   params:add { type = "control", id = "odash_attack_curve", name = "attack curve", controlspec = controlspec.new(-8, 8, 'lin', 1, 4, '') }
@@ -78,9 +79,10 @@ local function add_odashodasho_params(engine_to_index)
   params:add { type = "control", id = "odash_pan", name = "pan", controlspec = controlspec.new(-1, 1, 'lin', 0, 0, '') }
 end
 
-local function add_passersby_params(engine_to_index)
-  params:add_group("Passersby", 17)
-  add_activate_trigger(engine_to_index, "activate_passersby", "Activate: Passersby", "Passersby")
+local function add_passersby_params(switch_engine)
+  params:add_group("Passersby", 18)
+  add_activate_trigger("activate_passersby", "Activate: Passersby", "Passersby", switch_engine)
+  params:add_separator("PARAMETERS")
   params:add { type = "control", id = "pb_amp", name = "amp", controlspec = controlspec.new(0, 1, 'lin', 0, 1, ''), action = function(v) if string.lower(engine.name or "") == "passersby" then engine.amp(v) end end }
   params:add { type = "control", id = "pb_attack", name = "attack", controlspec = controlspec.new(0.003, 8, 'lin', 0.001, 0.04, 's'), action = function(v) if string.lower(engine.name or "") == "passersby" then engine.attack(v) end end }
   params:add { type = "control", id = "pb_decay", name = "decay", controlspec = controlspec.new(0.01, 8, 'lin', 0.001, 1, 's'), action = function(v) if string.lower(engine.name or "") == "passersby" then engine.decay(v) end end }
@@ -101,10 +103,10 @@ local function add_passersby_params(engine_to_index)
   params:add { type = "control", id = "pb_timbre_all", name = "timbre all", controlspec = controlspec.new(0, 1, 'lin', 0, 0, ''), action = function(v) if string.lower(engine.name or "") == "passersby" then engine.timbreAll(v) end end }
 end
 
-local function add_mxsamples_params(seafarers, engine_to_index)
+local function add_mxsamples_params(seafarers, switch_engine)
   if mxsamples ~= nil and mxsamples_instruments ~= nil and #mxsamples_instruments > 0 then
-    params:add_group("MxSamples", #seafarers + 2)
-    add_activate_trigger(engine_to_index, "activate_mxsamples", "Activate: MxSamples", "MxSamples")
+    params:add_group("MxSamples", #seafarers + 3)
+    add_activate_trigger("activate_mxsamples", "Activate: MxSamples", "MxSamples", switch_engine)
     params:add_trigger("mxsamples_randomize", "Randomize instruments")
     params:set_action("mxsamples_randomize", function()
       if #mxsamples_instruments == 0 then return end
@@ -113,19 +115,20 @@ local function add_mxsamples_params(seafarers, engine_to_index)
         params:set(s.id .. "_mxsamples_instrument", idx)
       end
     end)
+    params:add_separator("INSTRUMENTS")
     for _, s in ipairs(seafarers) do s:add_instrument_param() end
   end
 end
 
-local function add_fm7_group(engine_to_index)
-  if engine_to_index ~= nil and engine_to_index["FM7"] ~= nil then
+local function add_fm7_group(is_available, switch_engine)
+  if is_available then
     params:add_group("FM7", 1)
-    add_activate_trigger(engine_to_index, "activate_fm7", "Activate: FM7", "FM7")
+    add_activate_trigger("activate_fm7", "Activate: FM7", "FM7", switch_engine)
   end
 end
 
 function EngineSetup.setup(seafarers)
-  -- ENGINE selection plumbing (hidden index param and action)
+  -- ENGINE selection and activation plumbing (no hidden params)
   local function engine_available(name)
     if engine.names == nil or #engine.names == 0 then return true end
     return tab.contains(engine.names, name)
@@ -142,17 +145,9 @@ function EngineSetup.setup(seafarers)
     if engine_available(name) then table.insert(available_engines, name) end
   end
 
-  local default_engine_index = 1
-  for i, n in ipairs(available_engines) do if n == engine.name then default_engine_index = i break end end
-  local engine_to_index = {}
-  for i, n in ipairs(available_engines) do engine_to_index[n] = i end
-  params:add_number("engine_index", "engine index", 1, #available_engines, default_engine_index)
-  params:hide("engine_index")
-  params:set_action("engine_index", function(idx)
-    local name = available_engines[idx]
+  local function switch_engine(name)
     if name == nil or name == engine.name then return end
     clock.run(function()
-      -- stop current notes before switching
       for s = 1, #seafarers do
         seafarers[s]:all_notes_off()
       end
@@ -165,7 +160,7 @@ function EngineSetup.setup(seafarers)
         end
       end)
     end)
-  end)
+  end
 
   -- If MxSamples is installed, prepare instrument list and client
   if Utils.lib_installed("mx.samples/lib/mx.samples") then
@@ -178,11 +173,13 @@ function EngineSetup.setup(seafarers)
 
   -- AUDIO ENGINE SETTINGS
   params:add_separator("AUDIO ENGINE SETTINGS")
-  add_polyperc_params(engine_to_index)
-  add_mxsamples_params(seafarers, engine_to_index)
-  add_fm7_group(engine_to_index)
-  add_odashodasho_params(engine_to_index)
-  add_passersby_params(engine_to_index)
+  add_polyperc_params(switch_engine)
+  add_mxsamples_params(seafarers, switch_engine)
+  local is_fm7_available = false
+  for _, n in ipairs(available_engines) do if n == "FM7" then is_fm7_available = true break end end
+  add_fm7_group(is_fm7_available, switch_engine)
+  add_odashodasho_params(switch_engine)
+  add_passersby_params(switch_engine)
 end
 
 return EngineSetup
