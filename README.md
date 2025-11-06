@@ -23,13 +23,19 @@
 ## Front-panel controls
 
 - K2: Start/Stop (all modes)
-- K3:
-  - Autonomous: Reset
-  - Semi-autonomous: Next Pattern (advances all players)
-  - Manual: Advance selected player
-- K1+K3: Reset (all players)
-- E2: Select player (for manual advances)
-- E3: Tempo
+- K3: Reset (all seafarers)
+- E1: Switch focus (Header ↔ Seafarers)
+- E2: Move selection
+  - Header focus: select Mode / Pulse / Tempo / Median
+  - Seafarers focus: select seafarer 1–8
+- E3: Adjust selected
+  - Mode: change ensemble mode
+  - Pulse: toggle on/off
+  - Tempo: adjust BPM
+  - Median: read-only
+  - Seafarers focus:
+    - Semi-autonomous: advance all (Next Pattern)
+    - Manual: advance selected seafarer
 
 ## On-screen UI
 
