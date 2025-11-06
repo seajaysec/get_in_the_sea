@@ -48,6 +48,7 @@ function init()
         seafarers[s]:all_notes_off()
       end
       engine.load(name, function()
+        engine.name = name
         if name == "MxSamples" then
           mxSamplesInit()
         elseif name == "PolyPerc" then

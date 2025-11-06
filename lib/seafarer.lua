@@ -248,7 +248,8 @@ function Seafarer:step()
                 local voice = "sea" .. tostring(self.id)
                 local record = 0
                 local path = ""
-                engine.fm1(note_num, amp, pan, attack, decay, cAtk, cRel, mRatio, cRatio, index, iScale, fxsend, eqFreq, eqDB, lpf, noise, natk, nrel, voice, record, path)
+                engine.fm1(note_num, amp, pan, attack, decay, cAtk, cRel, mRatio, cRatio, index, iScale, fxsend, eqFreq,
+                  eqDB, lpf, noise, natk, nrel, voice, record, path)
                 table.insert(self.active_notes, note_num)
               else
                 -- Unknown engine; skip audio trigger to avoid errors
