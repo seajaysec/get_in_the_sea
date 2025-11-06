@@ -95,7 +95,7 @@ function Seafarer:new(id)
 end
 
 function Seafarer:add_output_param()
-  params:add { type = "option", id = self.id .. "_output", name = "output",
+  params:add { type = "option", id = self.id .. "_output", name = "S" .. self.id .. " output",
     options = options.OUTPUT,
     action = function(value)
       self:all_notes_off()
@@ -113,7 +113,7 @@ end
 
 function Seafarer:add_instrument_param()
   if mxsamples ~= nil then
-    params:add { type = "option", id = self.id .. "_mxsamples_instrument", name = "mx inst.", options = mxsamples_instruments,
+    params:add { type = "option", id = self.id .. "_mxsamples_instrument", name = "S" .. self.id .. " instrument", options = mxsamples_instruments,
       action = function(value)
         self:all_notes_off()
         self.mx_instrument = mxsamples_instruments[value]
@@ -123,7 +123,7 @@ function Seafarer:add_instrument_param()
 end
 
 function Seafarer:add_octave_param()
-  params:add { type = "number", id = self.id .. "_octave", name = "octave",
+  params:add { type = "number", id = self.id .. "_octave", name = "S" .. self.id .. " octave",
     min = -3, max = 3, default = 0,
     action = function(value)
       self.octave = value
@@ -132,7 +132,7 @@ function Seafarer:add_octave_param()
 end
 
 function Seafarer:add_midi_device_param()
-  params:add { type = "number", id = self.id .. "midi_out_device", name = "midi out device",
+  params:add { type = "number", id = self.id .. "midi_out_device", name = "S" .. self.id .. " midi device",
     min = 1, max = 4, default = 1, action = function(value)
     self:all_notes_off()
     self.midi_out_device = midi.connect(value)
@@ -141,7 +141,7 @@ function Seafarer:add_midi_device_param()
 end
 
 function Seafarer:add_midi_channel_param()
-  params:add { type = "number", id = self.id .. "_midi_out_channel", name = "midi out channel",
+  params:add { type = "number", id = self.id .. "_midi_out_channel", name = "S" .. self.id .. " midi channel",
     min = 1, max = 16, default = 1,
     action = function(value)
       self:all_notes_off()
