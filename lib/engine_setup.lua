@@ -35,7 +35,7 @@ end
 local function add_polyperc_params(switch_engine)
   params:add_group("PolyPerc", 8)
   add_activate_trigger("activate_polyperc", "Activate: PolyPerc", "PolyPerc", switch_engine)
-  params:add_separator("PARAMETERS")
+  params:add_separator("POLYPERC PARAMETERS")
   local cs_AMP = controlspec.new(0, 1, 'lin', 0, 0.5, '')
   params:add { type = "control", id = "amp", controlspec = cs_AMP, action = function(x)
     if string.lower(engine.name or "") == "polyperc" then
@@ -82,7 +82,7 @@ end
 local function add_odashodasho_params(switch_engine)
   params:add_group("Odashodasho", 18)
   add_activate_trigger("activate_odashodasho", "Activate: Odashodasho", "Odashodasho", switch_engine)
-  params:add_separator("PARAMETERS")
+  params:add_separator("ODASHODASHO PARAMETERS")
   params:add { type = "control", id = "odash_attack", name = "attack", controlspec = controlspec.new(0, 8, 'lin', 0.01, 0.01, 's') }
   params:add { type = "control", id = "odash_decay", name = "decay", controlspec = controlspec.new(0, 8, 'lin', 0.01, 0.5, 's') }
   params:add { type = "control", id = "odash_attack_curve", name = "attack curve", controlspec = controlspec.new(-8, 8, 'lin', 1, 4, '') }
@@ -106,7 +106,7 @@ end
 local function add_passersby_params(switch_engine)
   params:add_group("Passersby", 18)
   add_activate_trigger("activate_passersby", "Activate: Passersby", "Passersby", switch_engine)
-  params:add_separator("PARAMETERS")
+  params:add_separator("PASSERSBY PARAMETERS")
   params:add { type = "control", id = "pb_amp", name = "amp", controlspec = controlspec.new(0, 1, 'lin', 0, 1, ''), action = function(
       v)
     if string.lower(engine.name or "") == "passersby" then engine.amp(v) end

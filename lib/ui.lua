@@ -8,8 +8,7 @@ function UI.draw(seafarers, any_playing, ensemble)
   screen.font_size(12)
   screen.level(15)
 
-  screen.move(0, 10)
-  screen.text("Get in the sea!")
+  -- title removed to declutter
 
   screen.font_size(10)
 
@@ -51,13 +50,7 @@ function UI.draw(seafarers, any_playing, ensemble)
   end
   screen.level(15)
 
-  screen.font_size(8)
-  screen.move(0, 60)
-  if any_playing then
-    screen.text("Stop   Reset")
-  else
-    screen.text("Start  Reset")
-  end
+  -- bottom controls text removed; status is represented elsewhere
 
   screen.update()
 end
