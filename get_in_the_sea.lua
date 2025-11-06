@@ -7,7 +7,6 @@
 engine.name = "MxSamples"
 
 local Seafarer = include("lib/seafarer")
-local tab = require "tabutil"
 
 mxsamples_instruments = {}
 m = midi.connect()

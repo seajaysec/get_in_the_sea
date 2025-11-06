@@ -134,9 +134,9 @@ end
 function Seafarer:add_midi_device_param()
   params:add { type = "number", id = self.id .. "midi_out_device", name = "midi out device",
     min = 1, max = 4, default = 1, action = function(value)
-      self:all_notes_off()
-      self.midi_out_device = midi.connect(value)
-    end
+    self:all_notes_off()
+    self.midi_out_device = midi.connect(value)
+  end
   }
 end
 
