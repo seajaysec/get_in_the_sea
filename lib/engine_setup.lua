@@ -173,7 +173,7 @@ end
 
 local function add_mxsamples_params(seafarers, switch_engine)
   if mxsamples ~= nil and mxsamples_instruments ~= nil and #mxsamples_instruments > 0 then
-    params:add_group("Seafarer Instruments", #seafarers + 3)
+    params:add_group("MX.SAMPLES MENU 2", #seafarers + 3)
     add_activate_trigger("activate_mxsamples", "Activate: MxSamples", "MxSamples", switch_engine)
     params:add_trigger("mxsamples_randomize", "Randomize instruments")
     params:set_action("mxsamples_randomize", function()
