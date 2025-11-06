@@ -54,7 +54,7 @@ function init()
   params:add_separator("SEAFARER OCTAVE")
   for _, s in ipairs(seafarers) do s:add_octave_param() end
   do
-    local default_octaves = { 0, 0, -1, -2, -3, 1, 2, 3 }
+    local default_octaves = { 0, -1, -2, -3, 1, 2, 3, -1 }
     for i, s in ipairs(seafarers) do
       params:set(s.id .. "_octave", default_octaves[i])
     end
