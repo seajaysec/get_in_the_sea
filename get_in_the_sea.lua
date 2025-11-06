@@ -43,13 +43,21 @@ function init()
     local name = available_engines[idx]
     if name == nil or name == engine.name then return end
     clock.run(function()
+      -- stop current notes before switching
+      for s = 1, #seafarers do
+        seafarers[s]:all_notes_off()
+      end
       engine.load(name, function()
-        if name == "MxSamples" then mxSamplesInit() end
+        if name == "MxSamples" then
+          mxSamplesInit()
+        elseif name == "PolyPerc" then
+          polypercInit()
+        end
       end)
     end)
   end)
   for i, name in ipairs(available_engines) do
-    params:add_trigger("engine_activate_" .. name, "Engine: " .. name)
+    params:add_trigger("engine_activate_" .. name, "Activate: " .. name)
     params:set_action("engine_activate_" .. name, function()
       params:set("engine_index", i)
     end)
@@ -112,6 +120,15 @@ end
 
 function mxSamplesInit()
   skeys:reset()
+end
+
+function polypercInit()
+  if string.lower(engine.name) ~= "polyperc" then return end
+  engine.amp(0.5)
+  engine.release(1.2)
+  engine.cutoff(800)
+  engine.gain(1)
+  engine.pan(0)
 end
 
 function libInstalled(file)
