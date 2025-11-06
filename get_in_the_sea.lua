@@ -7,6 +7,7 @@
 engine.name = "MxSamples"
 
 local Seafarer = include("lib/seafarer")
+local tab = require "tabutil"
 
 mxsamples_instruments = {}
 m = midi.connect()
@@ -17,6 +18,41 @@ local seafarers = {}
 local any_playing = false
 
 function init()
+  -- ENGINE section (Orca-style engine triggers)
+  local function engine_available(name)
+    if engine.names == nil or #engine.names == 0 then return true end
+    return tab.contains(engine.names, name)
+  end
+
+  local engines_list = {"PolyPerc", "FM7", "Passersby", "Timber", "Odashodasho"}
+  if libInstalled("mx.samples/lib/mx.samples") then
+    table.insert(engines_list, "MxSamples")
+  end
+
+  local available_engines = {}
+  for _, name in ipairs(engines_list) do
+    if engine_available(name) then table.insert(available_engines, name) end
+  end
+
+  params:add_separator("ENGINE")
+  params:add_number("engine_index", "engine index", 1, #available_engines, 1)
+  params:hide("engine_index")
+  params:set_action("engine_index", function(idx)
+    local name = available_engines[idx]
+    if name == nil or name == engine.name then return end
+    clock.run(function()
+      engine.load(name, function()
+        if name == "MxSamples" then mxSamplesInit() end
+      end)
+    end)
+  end)
+  for i, name in ipairs(available_engines) do
+    params:add_trigger("engine_activate_" .. name, "Engine: " .. name)
+    params:set_action("engine_activate_" .. name, function()
+      params:set("engine_index", i)
+    end)
+  end
+
   if libInstalled("mx.samples/lib/mx.samples") then
     mxsamples = include("mx.samples/lib/mx.samples")
     skeys = mxsamples:new()
@@ -25,12 +61,12 @@ function init()
   end
 
   -- GLOBAL settings
-  params:add_group("GLOBAL", 3)
+  params:add_separator("GLOBAL")
   params:add { type = "number", id = "max_drift", name = "max phrase drift", min = 1, max = 10, default = 3 }
   params:add { type = "number", id = "repeat_probability", name = "repeat probability", min = 0, max = 10, default = 5 }
   params:add { type = "control", id = "grace_len_beats", name = "grace length (beats)", controlspec = controlspec.new(0.0625, 0.5, 'lin', 0, 0.0625, 'beats') }
 
-  -- add seafarers
+  -- instantiate seafarers
   table.insert(seafarers, Seafarer:new(1))
   table.insert(seafarers, Seafarer:new(2))
   table.insert(seafarers, Seafarer:new(3))
@@ -41,27 +77,27 @@ function init()
   table.insert(seafarers, Seafarer:new(7))
   table.insert(seafarers, Seafarer:new(8))
 
-  -- ORCA-style sections
+  -- ORCA-style sections (no menu diving)
   -- OUTPUT
-  params:add_group("SEAFARER OUTPUT", #seafarers)
+  params:add_separator("SEAFARER OUTPUT")
   for _, s in ipairs(seafarers) do s:add_output_param() end
 
   -- INSTRUMENT (MxSamples only)
   if mxsamples ~= nil and #mxsamples_instruments > 0 then
-    params:add_group("SEAFARER INSTRUMENT", #seafarers)
+    params:add_separator("SEAFARER INSTRUMENT")
     for _, s in ipairs(seafarers) do s:add_instrument_param() end
   end
 
   -- OCTAVE
-  params:add_group("SEAFARER OCTAVE", #seafarers)
+  params:add_separator("SEAFARER OCTAVE")
   for _, s in ipairs(seafarers) do s:add_octave_param() end
 
   -- MIDI DEVICE
-  params:add_group("SEAFARER MIDI DEVICE", #seafarers)
+  params:add_separator("SEAFARER MIDI DEVICE")
   for _, s in ipairs(seafarers) do s:add_midi_device_param() end
 
   -- MIDI CHANNEL
-  params:add_group("SEAFARER MIDI CHANNEL", #seafarers)
+  params:add_separator("SEAFARER MIDI CHANNEL")
   for _, s in ipairs(seafarers) do s:add_midi_channel_param() end
 
   params:default()
