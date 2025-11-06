@@ -245,7 +245,7 @@ function enc(n, d)
         if pick ~= nil then
           -- trigger activation param if available
           local id = "activate_" .. string.lower(pick)
-          if params.lookup[id] ~= nil or params:lookup_param(id) ~= nil then
+          if params:lookup_param(id) ~= nil then
             params:bang(id)
           end
         end
