@@ -37,7 +37,7 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
     if ensemble == nil then return end
     -- Info: Status page (existing metrics)
     screen.font_size(8)
-    screen.move(0, 28)
+    screen.move(0, 26)
     screen.level(15)
     screen.text("Info")
 
@@ -69,22 +69,23 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
     local total = math.max(1, #phrases)
     local pct = math.floor((median / total) * 100)
 
-    screen.move(0, 38)
+    screen.move(0, 36)
     screen.level(12)
     screen.text(string.format("Time %s  Complete %d%%", time_str, pct))
 
-    screen.move(0, 48)
+    screen.move(0, 44)
     screen.text(string.format("Median %d  Spread %d", median, spread))
 
-    screen.move(0, 58)
+    screen.move(0, 52)
     screen.text(string.format("Active %d  Resting %d  Ready %d", active, resting, ready))
 
-    screen.move(0, 68)
+    screen.move(0, 60)
     screen.level(10)
     screen.text(string.format("At53 %d  Ending %s", at53, ensemble.ending and "on" or "off"))
 
     -- final row: positions
-    screen.move(0, 78)
+    -- positions row (tight at bottom)
+    screen.move(0, 62)
     local pos = {}
     for i = 1, #seafarers do pos[i] = string.format("%02d", seafarers[i].phrase or 1) end
     screen.text("Pos: " .. table.concat(pos, " "))
