@@ -2,7 +2,7 @@
 
 local UI = {}
 
-function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_index, ui_pages)
+function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_index, ui_pages, splash_state)
   screen.clear()
   screen.font_face(12)
   screen.font_size(12)
@@ -13,6 +13,31 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
   -- No menubar; pages are implied and full-screen
 
   -- content area
+  if splash_state and splash_state.show then
+    -- Startup splash: concise, actionable
+    screen.font_size(10)
+    screen.move(0, 12)
+    screen.level(15)
+    screen.text("Get in the Sea")
+
+    screen.move(0, 26)
+    screen.level(12)
+    screen.text("Front: K2 start/stop  E1 pages  E2 select  E3 adjust")
+
+    screen.move(0, 38)
+    screen.level(10)
+    screen.text("Semi-auto: E3 +1 (advance all)  watch Target N, Ready")
+
+    screen.move(0, 50)
+    screen.text("Manual: E2 pick  E3 advance  watch Median/Spread/Align")
+
+    screen.move(0, 62)
+    screen.level(10)
+    screen.text("Params: Ensemble, Humanize, Density, Engine, Output, Rand")
+
+    screen.update()
+    return
+  end
   local function draw_page_title(title)
     screen.font_size(10)
     screen.move(0, 12)
