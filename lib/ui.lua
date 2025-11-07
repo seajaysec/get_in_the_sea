@@ -164,16 +164,24 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
     local y = 30
     -- Precompute cluster pattern for manual highlight
     local cluster_pattern = nil
+    local manual_wide = false
+    local manual_median = nil
     if ensemble ~= nil and ensemble:get_mode() == "manual" then
       local hist2 = {}
       local best_p = nil
       local best_c = 0
+      local min_p2 = 999
+      local max_p2 = 1
       for i = 1, #seafarers do
         local p = seafarers[i].phrase or 1
         hist2[p] = (hist2[p] or 0) + 1
         if hist2[p] > best_c then best_c = hist2[p]; best_p = p end
+        if p < min_p2 then min_p2 = p end
+        if p > max_p2 then max_p2 = p end
       end
       if best_c >= 3 then cluster_pattern = best_p end
+      manual_median = ensemble.median_pattern or 1
+      manual_wide = (math.max(0, max_p2 - min_p2) > 4)
     end
     for s = 1, #seafarers do
       local is_selected = (ensemble ~= nil and ensemble.selected_player == s)
@@ -188,11 +196,19 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
         num = "[" .. num .. "]"
         screen.level(15)
       else
+        local level = 10
         if cluster_pattern ~= nil and (seafarers[s].phrase == cluster_pattern) then
-          screen.level(12)
-        else
-          screen.level(10)
+          level = 12
         end
+        if manual_wide and manual_median ~= nil then
+          local p = seafarers[s].phrase or 1
+          if p <= (manual_median - 2) then
+            level = 13 -- brighten laggards: candidates to advance
+          elseif p >= (manual_median + 3) then
+            level = 8  -- dim leaders: candidates to hold
+          end
+        end
+        screen.level(level)
       end
       screen.move(x, y)
       screen.text(num)
