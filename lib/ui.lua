@@ -105,6 +105,39 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
 
   local function draw_seafarers_page()
     draw_page_title("Seafarers")
+    -- mode-aware subheader
+    if ensemble ~= nil then
+      local mode = ensemble:get_mode()
+      screen.font_size(10)
+      screen.move(0, 20)
+      screen.level(10)
+      if mode == "semi-autonomous" then
+        local target = ensemble.user_pattern_target or 1
+        local ready = 0
+        for i = 1, #seafarers do if seafarers[i].ready_indicator then ready = ready + 1 end end
+        screen.text(string.format("Semi-auto  Target N: %d  Ready %d/8", target, ready))
+      elseif mode == "manual" then
+        local min_p = 999
+        local max_p = 1
+        local hist = {}
+        for i = 1, #seafarers do
+          local p = seafarers[i].phrase or 1
+          if p < min_p then min_p = p end
+          if p > max_p then max_p = p end
+          hist[p] = (hist[p] or 0) + 1
+        end
+        local spread = math.max(0, max_p - min_p)
+        local spread_txt = (spread <= 2) and "tight" or ((spread <= 4) and "healthy" or "wide")
+        local align = 0
+        for _, c in pairs(hist) do if c > align then align = c end end
+        local median = ensemble.median_pattern or 1
+        screen.text(string.format("Manual  Median %d  Spread %s  Align %d", median, spread_txt, align))
+      else
+        local median = ensemble.median_pattern or 1
+        screen.text(string.format("Autonomous  Median %d", median))
+      end
+    end
+
     -- players grid
     screen.font_size(10)
     local x = 0
