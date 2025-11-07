@@ -29,6 +29,9 @@ local seafarers = {}
 local any_playing = false
 local ensemble = nil
 local k1_down = false
+-- Splash overlay state
+local splash_deadline = nil
+local splash_dismissed = false
 -- Page-based UI model
 local ui_pages = {
   { id = "seafarers", label = "Seafarers" },
@@ -168,12 +171,18 @@ function init()
 
   draw_metro.event = update
   draw_metro:start(1 / 10)
+
+  -- show splash for a few seconds on startup
+  splash_deadline = util.time() + 7
+  splash_dismissed = false
 end
 
 -- External: MIDI transport handler
 Midi.register_transport(m, seafarers)
 
 function enc(n, d)
+  -- any user interaction dismisses splash
+  splash_dismissed = true
   if ensemble == nil then return end
   if n == 1 then
     -- E1: cycle pages
@@ -264,6 +273,8 @@ function enc(n, d)
 end
 
 function key(n, z)
+  -- any user interaction dismisses splash
+  if z == 1 then splash_dismissed = true end
   if z == 1 then
     if n == 1 then
       k1_down = true
