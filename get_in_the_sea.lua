@@ -41,9 +41,7 @@ local ui_pages = {
 }
 local ui_page_index = 1
 local ui_element_index = 1
--- Engine selection UI state
-local engine_choice_list = nil
-local engine_choice_index = nil
+-- (engine activation UI state removed)
 
 local function sign(d)
   if d > 0 then return 1 elseif d < 0 then return -1 else return 0 end
@@ -64,8 +62,6 @@ end
 
 local function engine_elements_for_active_engine(selected_id)
   local elements = {}
-  -- engine activation selector (always at index 1)
-  table.insert(elements, { type = "engine_select" })
   local ae = string.lower(engine.name or "")
   if ae == "mxsamples" then
     -- per-seafarer instrument selector if available
@@ -85,7 +81,7 @@ local function engine_elements_for_active_engine(selected_id)
       table.insert(elements, { type = "param", id = id })
     end
   else
-    -- fm7 or unknown: engine select only
+    -- fm7 or unknown: no per-engine params
   end
   return elements
 end
@@ -111,47 +107,7 @@ local function page_element_count()
   return 1
 end
 
-local function build_engine_choice_list()
-  -- Prefer activation triggers to reflect availability
-  local list = {}
-  local function add_if(trigger_id, name)
-    if params:lookup_param(trigger_id) ~= nil then table.insert(list, name) end
-  end
-  add_if("activate_polyperc", "PolyPerc")
-  add_if("activate_fm7", "FM7")
-  add_if("activate_passersby", "Passersby")
-  add_if("activate_odashodasho", "Odashodasho")
-  add_if("activate_mxsamples", "MxSamples")
-  -- Union with engine.names fallback
-  local names = engine.names or {}
-  for _, nm in ipairs(names) do
-    local present = false
-    for _, x in ipairs(list) do if x == nm then present = true break end end
-    if not present then table.insert(list, nm) end
-  end
-  -- Ensure at least current engine is present
-  local cur = engine.name or nil
-  if cur ~= nil then
-    local present = false
-    for _, x in ipairs(list) do if x == cur then present = true break end end
-    if not present then table.insert(list, cur) end
-  end
-  return list
-end
-
-local function ensure_engine_choice_initialized()
-  if engine_choice_list == nil or #engine_choice_list == 0 then
-    engine_choice_list = build_engine_choice_list()
-  end
-  if engine_choice_index == nil or engine_choice_index < 1 or engine_choice_index > #engine_choice_list then
-    local target = string.lower(engine.name or "")
-    local idx = 1
-    for i, nm in ipairs(engine_choice_list) do
-      if string.lower(nm or "") == target then idx = i break end
-    end
-    engine_choice_index = idx
-  end
-end
+-- (engine activation helper functions removed)
 
 function init()
   -- instantiate seafarers
@@ -221,12 +177,7 @@ function enc(n, d)
     if delta ~= 0 then
       ui_page_index = wrap(ui_page_index + delta, 1, #ui_pages)
       ui_element_index = 1
-      -- when entering engine page, initialize engine choice state
-      if current_page().id == "engine" then
-        engine_choice_list = build_engine_choice_list()
-        engine_choice_index = nil
-        ensure_engine_choice_initialized()
-      end
+      -- no special init on engine page (activation UI removed)
     end
   elseif n == 2 then
     -- E2: cycle elements within current page
@@ -280,20 +231,7 @@ function enc(n, d)
       local els = engine_elements_for_active_engine(sel)
       local idx = math.max(1, math.min(ui_element_index, #els))
       local el = els[idx]
-      if el and el.type == "engine_select" then
-        ensure_engine_choice_initialized()
-        local delta = sign(d)
-        if delta ~= 0 and #engine_choice_list > 0 then
-          engine_choice_index = wrap(engine_choice_index + delta, 1, #engine_choice_list)
-          local pick = engine_choice_list[engine_choice_index]
-          if pick ~= nil then
-            local id = "activate_" .. string.lower(pick)
-            if params:lookup_param(id) ~= nil then
-              params:bang(id)
-            end
-          end
-        end
-      elseif el and el.type == "param" and el.id ~= nil then
+      if el and el.type == "param" and el.id ~= nil then
         params:delta(el.id, sign(d))
       end
     elseif page.id == "output" then
