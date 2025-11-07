@@ -42,7 +42,7 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
 
   local function draw_info_status()
     if ensemble == nil then return end
-    -- Info: Status page (existing metrics), spaced for readability
+    -- Info: streamlined, human-centered status
     draw_page_title("Info")
 
     local median = ensemble.median_pattern or 1
@@ -51,7 +51,7 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
     local active = 0
     local resting = 0
     local ready = 0
-    local at53 = 0
+    local hist = {}
     for i = 1, #seafarers do
       local s = seafarers[i]
       local p = s.phrase or 1
@@ -60,9 +60,11 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
       if s.playing and not s.is_resting then active = active + 1 end
       if s.is_resting then resting = resting + 1 end
       if s.ready_indicator then ready = ready + 1 end
-      if p >= #phrases then at53 = at53 + 1 end
+      hist[p] = (hist[p] or 0) + 1
     end
     local spread = math.max(0, max_p - min_p)
+    local max_align = 0
+    for _, c in pairs(hist) do if c > max_align then max_align = c end end
 
     local elapsed = 0
     if ensemble.get_elapsed_seconds ~= nil then elapsed = ensemble:get_elapsed_seconds() end
@@ -70,22 +72,33 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
     local m = math.floor((elapsed % 3600) / 60)
     local ssec = elapsed % 60
     local time_str = string.format("%02d:%02d:%02d", h, m, ssec)
-    local total = math.max(1, #phrases)
-    local pct = math.floor((median / total) * 100)
+    local tempo = math.floor(ensemble.tempo_bpm or clock.get_tempo() or 120)
+    local pulse = ensemble.pulse_enabled and "on" or "off"
+
+    local zone = "C Major"
+    if median >= 14 and median <= 30 then zone = "F# tension"
+    elseif median >= 31 and median <= 34 then zone = "F natural return"
+    elseif median >= 35 and median <= 48 then zone = "Bb transform"
+    elseif median >= 49 then zone = "Arrival"
+    end
+
+    local spread_txt = (spread <= 2) and "tight" or ((spread <= 4) and "healthy" or "wide")
 
     screen.move(0, 26)
     screen.level(12)
-    screen.text(string.format("Time %s  Complete %d%%", time_str, pct))
+    screen.text(string.format("Time %s  %dbpm  Pulse %s", time_str, tempo, pulse))
 
     screen.move(0, 38)
-    screen.text(string.format("Median %d  Spread %d", median, spread))
+    screen.text(string.format("Zone: %s", zone))
 
     screen.move(0, 50)
-    screen.text(string.format("Active %d  Resting %d  Ready %d", active, resting, ready))
+    screen.text(string.format("Active %d/8  Spread %s", active, spread_txt))
 
     screen.move(0, 62)
     screen.level(10)
-    screen.text(string.format("At53 %d  Ending %s", at53, ensemble.ending and "on" or "off"))
+    local align_txt = (max_align >= 3) and ("Align " .. tostring(max_align)) or "Align none"
+    local ready_txt = (ready > 0) and ("  Ready " .. tostring(ready)) or ""
+    screen.text(align_txt .. ready_txt)
 
     screen.update()
   end
@@ -160,11 +173,13 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
     screen.font_size(10)
     local ae = engine.name or "?"
     draw_page_title("Engine")
+    -- Subheader: current engine
+    screen.move(0, 20)
+    screen.level(10)
+    screen.text("Current: " .. ae)
     local sel = (ensemble and ensemble.selected_player) or 1
     -- Editable rows begin after header
     local rows = {}
-    -- Row 1: Activate engine selector (interactive); show current engine
-    table.insert(rows, { label = "Activate", value = ae, kind = "engine_select" })
     local ael = string.lower(ae or "")
     if ael == "mxsamples" then
       if mxsamples_instruments ~= nil and #mxsamples_instruments > 0 then
@@ -192,7 +207,7 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
       local val = (type(it.value) == "number") and util.round(it.value, 0.01) or tostring(it.value)
       table.insert(text_rows, string.format("%s: %s", it.label, val))
     end
-    draw_list(text_rows, ui_element_index, 26, 12, 4)
+    draw_list(text_rows, ui_element_index, 28, 12, 4)
   end
 
   local function draw_output_page()
