@@ -182,6 +182,12 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
       { label = "Pulse", value = (ensemble.pulse_enabled and "on" or "off") },
       { label = "Tempo", value = string.format("%dbpm", math.floor(ensemble.tempo_bpm or clock.get_tempo() or 120)) },
     }
+    if ensemble:get_mode() == "semi-autonomous" then
+      table.insert(items, { label = "Target N", value = tostring(ensemble.user_pattern_target or 1) })
+      local ready = 0
+      for i = 1, #seafarers do if seafarers[i].ready_indicator then ready = ready + 1 end end
+      table.insert(items, { label = "Ready", value = string.format("%d/8", ready) })
+    end
     screen.font_size(10)
     local rows = {}
     for _, it in ipairs(items) do table.insert(rows, it.label .. ": " .. it.value) end
