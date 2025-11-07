@@ -319,7 +319,8 @@ end
 
 function redraw()
   -- External: delegate screen drawing to UI module
-  UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_index, ui_pages)
+  local show_splash = (not splash_dismissed) and (splash_deadline ~= nil and util.time() < splash_deadline) and (not any_playing)
+  UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_index, ui_pages, { show = show_splash })
 end
 
 function cleanup()
