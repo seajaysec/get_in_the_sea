@@ -12,9 +12,11 @@
 --   Ensemble: Mode, Pulse, Tempo (+ Target N, Ready in semi-auto)
 --   Info: Time/Tempo/Pulse; Zone; Active/Spread; Align
 -- Params (menu):
---   Engine activation + full parameters; per-voice output/MIDI, humanization, randomization
--- Why:
---   Keep spread healthy, use convergences, shape pace; auto ending at 53
+--   Engine activation
+--   Full ending parameters
+--   Per-voice output/MIDI
+--   Humanization
+--   Randomization
 
 engine.name = "MxSamples"
 
