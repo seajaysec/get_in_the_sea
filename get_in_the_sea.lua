@@ -98,7 +98,7 @@ local function page_element_count()
     return 4
   elseif page.id == "engine" then
     local sel = get_selected_player()
-    return #engine_elements_for_active_engine(sel)
+    return math.max(1, #engine_elements_for_active_engine(sel))
   elseif page.id == "output" then
     return 3
   elseif page.id == "random" then
