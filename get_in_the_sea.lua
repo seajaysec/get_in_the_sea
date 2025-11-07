@@ -91,7 +91,11 @@ local function page_element_count()
   if page.id == "seafarers" then
     return #seafarers
   elseif page.id == "ensemble" then
-    return 3
+    local count = 3
+    if ensemble ~= nil and ensemble.get_mode ~= nil and ensemble:get_mode() == "semi-autonomous" then
+      count = count + 2 -- Target N and Ready
+    end
+    return count
   elseif page.id == "info" then
     return 1
   elseif page.id == "human" then
