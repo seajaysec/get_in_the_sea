@@ -1,8 +1,20 @@
 -- scriptname: get_in_the_sea
 -- @tomw
 --
--- E1 start/stop
--- E2 reset
+-- get_in_the_sea - In C companion (8 players)
+-- Front (screen):
+--   K2 start/stop   K3 randomize
+--   E1 pages   E2 select   E3 act/adjust
+--   Semi-auto: E3 +1 (advance all to Target N); watch Target N, Ready
+--   Manual: E2 pick S#, E3 advance; watch Median, Spread, Align
+-- Pages: Seafarers | Ensemble | Info | Humanize | Engine | Output/MIDI | Random
+--   Seafarers: P## per voice; * ready; ^N cooldown; convergence highlight
+--   Ensemble: Mode, Pulse, Tempo (+ Target N, Ready in semi-auto)
+--   Info: Time/Tempo/Pulse; Zone; Active/Spread; Align
+-- Params (menu):
+--   Engine activation + full parameters; per-voice output/MIDI, humanization, randomization
+-- Why:
+--   Keep spread healthy, use convergences, shape pace; auto ending at 53
 
 engine.name = "MxSamples"
 
