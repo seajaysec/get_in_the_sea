@@ -5,6 +5,7 @@
 -- Front (screen):
 --   K2 start/stop   K3 randomize
 --   E1 pages   E2 select   E3 act/adjust
+--   Autonomous: agents self-advance; adjust Tempo/Pulse; Randomize ok
 --   Semi-auto: E3 +1 (advance all to Target N); watch Target N, Ready
 --   Manual: E2 pick S#, E3 advance; watch Median, Spread, Align
 -- Pages: Seafarers | Ensemble | Info | Humanize | Engine | Output/MIDI | Random
