@@ -110,12 +110,26 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
       local mode = ensemble:get_mode()
       screen.font_size(10)
       screen.move(0, 20)
-      screen.level(10)
+      local header_level = 10
+      local blink_on = ((util.time() % 1) < 0.5)
       if mode == "semi-autonomous" then
         local target = ensemble.user_pattern_target or 1
         local ready = 0
-        for i = 1, #seafarers do if seafarers[i].ready_indicator then ready = ready + 1 end end
+        local max_cd = 0
+        for i = 1, #seafarers do
+          if seafarers[i].ready_indicator then ready = ready + 1 end
+          local cd = seafarers[i].advance_cooldown_loops_remaining or 0
+          if cd > max_cd then max_cd = cd end
+        end
+        local good_advise = (ready >= 6) and (max_cd <= 1)
+        if good_advise and blink_on then header_level = 15 end
+        screen.level(header_level)
         screen.text(string.format("Semi-auto  Target N: %d  Ready %d/8", target, ready))
+        if good_advise then
+          screen.move(0, 26)
+          screen.level(blink_on and 15 or 10)
+          screen.text("Advise +1")
+        end
       elseif mode == "manual" then
         local min_p = 999
         local max_p = 1
@@ -131,6 +145,12 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
         local align = 0
         for _, c in pairs(hist) do if c > align then align = c end end
         local median = ensemble.median_pattern or 1
+        if align >= 3 and blink_on then
+          header_level = 15
+        elseif spread > 4 then
+          header_level = 12
+        end
+        screen.level(header_level)
         screen.text(string.format("Manual  Median %d  Spread %s  Align %d", median, spread_txt, align))
       else
         local median = ensemble.median_pattern or 1
@@ -142,6 +162,19 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
     screen.font_size(10)
     local x = 0
     local y = 30
+    -- Precompute cluster pattern for manual highlight
+    local cluster_pattern = nil
+    if ensemble ~= nil and ensemble:get_mode() == "manual" then
+      local hist2 = {}
+      local best_p = nil
+      local best_c = 0
+      for i = 1, #seafarers do
+        local p = seafarers[i].phrase or 1
+        hist2[p] = (hist2[p] or 0) + 1
+        if hist2[p] > best_c then best_c = hist2[p]; best_p = p end
+      end
+      if best_c >= 3 then cluster_pattern = best_p end
+    end
     for s = 1, #seafarers do
       local is_selected = (ensemble ~= nil and ensemble.selected_player == s)
       local num = string.format("%02d", seafarers[s].phrase)
@@ -155,7 +188,11 @@ function UI.draw(seafarers, any_playing, ensemble, ui_page_index, ui_element_ind
         num = "[" .. num .. "]"
         screen.level(15)
       else
-        screen.level(10)
+        if cluster_pattern ~= nil and (seafarers[s].phrase == cluster_pattern) then
+          screen.level(12)
+        else
+          screen.level(10)
+        end
       end
       screen.move(x, y)
       screen.text(num)
